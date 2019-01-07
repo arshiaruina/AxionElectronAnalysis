@@ -1,3 +1,4 @@
 *DS_Store
 *.o
-*.root
+resources/background_splitted.2014+2015.root
+resources/calibration-cdl-apr2014.root
