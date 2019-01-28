@@ -4,6 +4,9 @@
 
 #include <cstdlib>
 #include "TGraphErrors.h"
+#include "TH2D.h"
+#include "TCanvas.h"
+#include "TStyle.h"
 
 signalGenerator::signalGenerator(std::string axionSpectrumPath,
 				 std::string transmissionMylar2000nmPath,
@@ -208,6 +211,11 @@ std::pair<std::vector<double>, std::vector<double> > signalGenerator::readAxionF
     // with these variables, we can calculate the conversion probability when we
     // run over the file for each energy
 
+    //trying to create the solar axion flux vs energy plot
+    TCanvas *c1 = new TCanvas("c1", "c1",0.,0.,800,800);
+    gStyle->SetOptStat(0);
+    TH2D *myfluxhisto = new TH2D("myfluxhisto","",10,0.0,10.0,7,0.0,3.5);
+
     // get ifstream to file which contains spectrum
     std::ifstream axionSpecIfStream;
     axionSpecIfStream.open(axionSpectrumPath.c_str(), std::ifstream::in);
@@ -232,6 +240,13 @@ std::pair<std::vector<double>, std::vector<double> > signalGenerator::readAxionF
 	    // before we can add intensity, we need to include the conversion
 	    // probability from axions to photons
 	    iss_line >> _energy >> _axionIntensity;
+	     
+    	    //filling myfluxhisto
+    	    myfluxhisto->Fill(_energy,_axionIntensity);
+	    
+	    //std::cout << std::endl;
+	    //std::cout << "DEBUG:" << _energy << "\t" << _axionIntensity << std::endl;
+
 	    // calculate q using energy (m_a and _energy given in keV)
 	    q = m_a * m_a / (2.0 * _energy);
 	    // calculate argument of sin
@@ -243,10 +258,24 @@ std::pair<std::vector<double>, std::vector<double> > signalGenerator::readAxionF
 	    // now we can fill the tree with the values of _energy and _axionIntensity
 	    energyVec.push_back(_energy);
 	    intensityVec.push_back(_axionIntensity);
+     
 	}
     }
 
-    // after while loop, we can return create a pair of the two vectors 
+    //drawing myfluxhisto
+    myfluxhisto->SetMarkerStyle(0);
+    myfluxhisto->SetLineColor(kBlack);
+    myfluxhisto->SetLineWidth(2);
+    myfluxhisto->SetStats(0);
+    myfluxhisto->Draw("");
+    c1->SaveAs("myfluxhisto.pdf");
+
+    delete myfluxhisto;
+    delete c1;	
+
+    std::cout << "DEBUG: myhistoflux was filled, drawn and saved!" << std::endl;
+
+    // after while loop, we can create a pair of the two vectors 
     // and return it
     std::pair<std::vector<Double_t>, std::vector<Double_t> > vecPair;
     vecPair = std::make_pair(energyVec, intensityVec);

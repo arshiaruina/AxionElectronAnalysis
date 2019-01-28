@@ -1,4 +1,7 @@
 #include "axionElectronLimit.h"
+#include "TH1.h"
+#include "TCanvas.h"
+#include "TStyle.h"
 
 int main(){
     // the main function of the axion electron limit analysis script
@@ -32,7 +35,7 @@ int main(){
     //analysis specific stuff
     Bool_t useSystematicErrors(false);//true);
     Bool_t useStatisticalErrors(false);
-    Bool_t createBackgroundRatePlots(false);
+    Bool_t createBackgroundRatePlots(true);
 
     chipRegions::region chipRegionSignalChannelOne(chipRegions::region::gold);
     Double_t softwareEfficiencyChannelOne(0.8);
@@ -480,6 +483,32 @@ int main(){
 	dataChannelThree->Write();
     }
     std::cout << "Done!" << std::endl;
+
+    //TCanvas *c1 = new TCanvas("c1", "c1",0.,0.,900,900);
+    //gStyle->SetOptStat(0);
+    //TH1D *datahisto = (TH1D*) dataChannelOne->Clone();
+    //TH1D *bkghisto = (TH1D*) backgroundChannelOne->Clone();
+    //dataChannelOne->SetMarkerStyle(20);
+    //dataChannelOne->SetMarkerSize(1);
+    //dataChannelOne->SetMarkerColor(2);
+    //dataChannelOne->SetStats(0);
+    //dataChannelOne->Draw("HIST");
+    //backgroundChannelOne->SetMarkerStyle(20);
+    //backgroundChannelOne->SetMarkerSize(1);
+    //backgroundChannelOne->SetMarkerColor(1);
+    //backgroundChannelOne->SetStats(0);
+    //backgroundChannelOne->Draw("HISTsame");
+    //dataChannelOne->GetYaxis()->SetTitle("Rate");
+    //dataChannelOne->GetXaxis()->SetTitle("Energy[keV]");
+    //c1->SaveAs("myhisto.pdf");
+
+    //std::cout << "My histogram is probably made! " << std::endl;
+
+    //delete datahisto;
+    //delete bkghisto;
+    //delete c1;
+
+
 
     if(createBackgroundRatePlots)
     {

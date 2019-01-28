@@ -1,0 +1,6 @@
+#sar-txrtXX-70-InGrid-CAST-MkII-Mylar2000nmAl40nm-Mylar900nm-gold80-StatErrorsOff-srt20142015
+###########################################################################
+expected 95 % CLs limit at beta_gamma: 2.5e-16
+expected 95 % CLs limit (-1 sigma) at beta gamma: 3e-16
+expected 95 % CLs limit (+1 sigma) at beta gamma: 2.2e-16
+###########################################################################

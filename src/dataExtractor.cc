@@ -1,4 +1,7 @@
 #include "dataExtractor.h"
+#include "TH2D.h"
+#include "TCanvas.h"
+#include "TStyle.h"
 
 dataExtractor::dataExtractor(std::string dataRootFilePath, std::string dataRootTreeName)
 {
