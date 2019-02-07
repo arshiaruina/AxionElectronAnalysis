@@ -5,21 +5,29 @@
 #include <iomanip>
 #include <fstream>
 #include <vector>
-#include "readFile.h"
+#include "ReadOpacityFile.h"
 
 int main(){
-    readFile f;
-    f.GetTableIndex();
-    f.ReadAndStoreTable();
-    return 0;
+	ReadOpacityFile f;
+	f.ReadFileName();
+	f.GetTableIndex();
+	f.ReadAndStoreTable();
+	return 0;
 }
 
-int readFile::GetTableIndex() {
+//int readSolarModel::{
+//}
+
+void ReadOpacityFile::ReadFileName() {
+	
+}
+
+ 
+int ReadOpacityFile::GetTableIndex() {
 
 	int lineNumber = 0;
 	int posX = 0;
 	int posY = 0;
-	int posTableIndex = 0;
 
 	std::cout << "size of list: " << input << std::endl;
 
@@ -61,7 +69,7 @@ int readFile::GetTableIndex() {
         in_file.close();
 }		
 
-int readFile::ReadAndStoreTable() {
+int ReadOpacityFile::ReadAndStoreTable() {
 
         for(int i = 0; i < input; i++){
 

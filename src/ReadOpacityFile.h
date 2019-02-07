@@ -8,9 +8,12 @@ struct SELECT {
 	int lineNumber = 0;
 };
 
-class readFile{
-private:
+struct FILENAME {
+	double  
+}
 
+class ReadOpacityFile{
+private:
     	std::vector<SELECT> select;
     	std::vector<std::string> H_massFrac_list = {"0.9980","0.9999"};
     	std::vector<std::string> He_massFrac_list = {"0.0000","0.0000"};
