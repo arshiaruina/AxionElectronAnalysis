@@ -5,126 +5,249 @@
 #include <iomanip>
 #include <fstream>
 #include <vector>
+#include <cmath>
+#include <algorithm>
 #include "ReadSolarModel.h"
 
 int main(){	
 	SolarModel f;
-	//f.ReadAndStoreTable(); 
+	//f.ReadAndStoreSolarModel(); 
 	//f.MetalMassFraction();
 	f.ReadOpacityFileName();
-    return 0;
+    	f.AccessSolarModel();
+	
+	return 0;
 }
 
- 
-int SolarModel::ReadAndStoreTable() {
+double SquaredDistance(double x1, double x2){
+	return((x1-x2)*(x1-x2));
+}
+
+bool SortDistances(DISVAL& v1, DISVAL& v2){
+	return (v1.dist < v2.dist);
+}
+
+//double SolarModel::AccessOpacityFile(std::string s, std::string H, std::string He, std::string R, std::string T);
+
+/*--------------------------------------------------------------------------------------------------------
+This function reads and stores the contents of the Solar Model in a vector called row
+and simultaneously computes and stores the metal mass fractions for each row in another vector called X_Z.
+The elements of X_Z will be compared to the opacity filenames to find the closest matching metal composition
+for a particular row and later access that opacity table.
+----------------------------------------------------------------------------------------------------------*/
+int SolarModel::AccessSolarModel() {
 
 	int lineNumber = 0;
 	int i = 0;
+	double total_massFrac = 0.0;
+	double non_metal_massFrac = 1.0;
+	double metal_massFrac_actual = 0.0;
+	double metal_massFrac = 0.0;
 
-	solarmodel_file.open(filename_solarmodel.c_str());
+	solarmodel_file.open(solarmodel_filename.c_str());
 
 	if(!solarmodel_file.good()){
         	std::cout << "Problem with file!" << std::endl;
 		return 1;
 	}
 
-        while(!solarmodel_file.eof() && lineNumber < 25){
-        //while(!solarmodel_file.eof()){
+        std::cout << "[INFO] Reading solar model file... " << std::endl;
+
+        while(!solarmodel_file.eof() && lineNumber < 25) {
 		std::getline(solarmodel_file, line);
                 std::istringstream iss_line(line);
                 if(line.find("#")==0 || line.empty()) {
-                        std::cout << "[DEBUG] Skipping line " << lineNumber << std::endl;
+                        std::cout << "[INFO] Skipping line " << lineNumber << std::endl;
                         //++lineNumber;
                 }
                 else {
-                        //std::cout << "[DEBUG] Reading line " << lineNumber << std::endl;
+                        std::cout << "[INFO] Reading line " << lineNumber << std::endl;
 			row.push_back(ROW());
 			iss_line >> row[i].massFrac >> row[i].radius >> row[i].temp >> row[i].density >> row[i].pressure >> row[i].lumiFrac >> row[i].H_massFrac >> row[i].He4_massFrac >> row[i].He3_massFrac >> row[i].C12_massFrac >> row[i].C13_massFrac >> row[i].N14_massFrac >> row[i].N15_massFrac >> row[i].O16_massFrac >> row[i].O17_massFrac >> row[i].O18_massFrac >> row[i].Ne_massFrac >> row[i].Na_massFrac >> row[i].Mg_massFrac >> row[i].Al_massFrac >> row[i].Si_massFrac >> row[i].P_massFrac >> row[i].S_massFrac >> row[i].Cl_massFrac >> row[i].Ar_massFrac >> row[i].K_massFrac >> row[i].Ca_massFrac >> row[i].Sc_massFrac >> row[i].Ti_massFrac >> row[i].V_massFrac >> row[i].Cr_massFrac >> row[i].Mn_massFrac >> row[i].Fe_massFrac >> row[i].Co_massFrac >> row[i].Ni_massFrac;
+	
+                        std::cout << "[INFO] Computing and storing isotope mass fractions..." << std::endl;
 			row[i].He_massFrac = row[i].He4_massFrac + row[i].He3_massFrac;
 			row[i].C_massFrac = row[i].C12_massFrac + row[i].C13_massFrac;
 			row[i].N_massFrac = row[i].N14_massFrac + row[i].N15_massFrac;
 			row[i].O_massFrac = row[i].O16_massFrac + row[i].O17_massFrac + row[i].O18_massFrac;
                         //std::cout << "[DEBUG] line: " << line << std::endl;
                         //std::cout << "[DEBUG] (iss_line) row contents: " << row[i].massFrac << " " <<  row[i].radius << " " <<  row[i].temp << " " <<  row[i].density << " " <<  row[i].pressure << " " <<  row[i].lumiFrac << " " <<  row[i].H_massFrac << " " <<  row[i].He_massFrac << " " <<  row[i].C12_massFrac << " " <<  row[i].C13_massFrac << " " <<  row[i].N14_massFrac << " " <<  row[i].N15_massFrac << " " <<  row[i].O16_massFrac << " " <<  row[i].O17_massFrac << " " <<  row[i].O18_massFrac << " " <<  row[i].Ne_massFrac << " " <<  row[i].Na_massFrac << " " <<  row[i].Mg_massFrac << " " <<  row[i].Al_massFrac << " " <<  row[i].Si_massFrac << " " <<  row[i].S_massFrac << " " <<  row[i].Ar_massFrac << " " <<  row[i].Ca_massFrac << " " <<  row[i].Cr_massFrac << " " <<  row[i].Mn_massFrac << " " <<  row[i].Fe_massFrac << " " <<  row[i].Ni_massFrac;
+        
+                        std::cout << "[INFO] Computing and storing total metal fraction and the required metal mass fractions (which will be later used to choose the opacity file)..." << std::endl;
+			total_massFrac = row[i].H_massFrac + row[i].He4_massFrac + row[i].He3_massFrac + row[i].C12_massFrac + row[i].C13_massFrac + row[i].N14_massFrac + row[i].N15_massFrac + row[i].O16_massFrac + row[i].O17_massFrac + row[i].O18_massFrac + row[i].Ne_massFrac + row[i].Na_massFrac + row[i].Mg_massFrac + row[i].Al_massFrac + row[i].Si_massFrac + row[i].P_massFrac + row[i].S_massFrac + row[i].Cl_massFrac + row[i].Ar_massFrac + row[i].K_massFrac + row[i].Ca_massFrac + row[i].Sc_massFrac + row[i].Ti_massFrac + row[i].V_massFrac + row[i].Cr_massFrac + row[i].Mn_massFrac + row[i].Fe_massFrac + row[i].Co_massFrac + row[i].Ni_massFrac;
+			non_metal_massFrac = row[i].H_massFrac + row[i].He_massFrac;
+			metal_massFrac_actual = 1.0 - non_metal_massFrac; 
+			metal_massFrac = row[i].C_massFrac + row[i].N_massFrac + row[i].O_massFrac + row[i].Ne_massFrac + row[i].Na_massFrac + row[i].Mg_massFrac + row[i].Al_massFrac + row[i].Si_massFrac + row[i].S_massFrac + row[i].Ar_massFrac + row[i].Ca_massFrac + row[i].Cr_massFrac + row[i].Mn_massFrac + row[i].Fe_massFrac + row[i].Ni_massFrac;
+			/* metal_massFrac_actual and metal_massFrac are not equal
+			   the former is slightly larger than the latter (difference is of the order 10**-5)
+			   reason: while summing for metal_massFrac, we are inlcuding only those elements 
+			   which are available in the opacity tables
+			   for our purposes, we will consider the metal_massFrac as the total metal mass frac
+			   reason: that's what corresponds to the opacity tables */
+
+			//std::cout << "[DEBUG] total massFrac: " << total_massFrac << std::endl;
+			//std::cout << "[DEBUG] H_massFrac: " << row[i].H_massFrac << std::endl;
+			//std::cout << "[DEBUG] He_massFrac: " << row[i].He_massFrac << std::endl;
+			//std::cout << "[DEBUG] C_massFrac: " << row[i].C_massFrac << std::endl;
+			//std::cout << "[DEBUG] N_massFrac: " << row[i].N_massFrac << std::endl;
+			//std::cout << "[DEBUG] O_massFrac: " << row[i].O_massFrac << std::endl;	
+			//std::cout << "[DEBUG] Non-metal massFrac: " << non_metal_massFrac << std::endl;
+			//std::cout << "[DEBUG] Metal massFrac: " << metal_massFrac << std::endl;
+			//std::cout << "[DEBUG] Metal massFrac summed: " << metal_massFrac_summed << std::endl;
+		
+			row[i].total_metal_massFrac = metal_massFrac;
+			for(int j=0;j<15;j++)
+				row[i].X_Z.push_back(0.0);
+			row[i].X_Z[0] = row[i].C_massFrac  / row[i].total_metal_massFrac;	//row[i].X_C  
+			row[i].X_Z[1] = row[i].N_massFrac  / row[i].total_metal_massFrac;	//row[i].X_N  
+			row[i].X_Z[2] = row[i].O_massFrac  / row[i].total_metal_massFrac;	//row[i].X_O  
+			row[i].X_Z[3] = row[i].Ne_massFrac / row[i].total_metal_massFrac;	//row[i].X_Ne 
+			row[i].X_Z[4] = row[i].Na_massFrac / row[i].total_metal_massFrac;	//row[i].X_Na 
+			row[i].X_Z[5] = row[i].Mg_massFrac / row[i].total_metal_massFrac;	//row[i].X_Mg 
+			row[i].X_Z[6] = row[i].Al_massFrac / row[i].total_metal_massFrac;	//row[i].X_Al 
+			row[i].X_Z[7] = row[i].Si_massFrac / row[i].total_metal_massFrac;	//row[i].X_Si 
+			row[i].X_Z[8] = row[i].S_massFrac  / row[i].total_metal_massFrac;	//row[i].X_S  
+			row[i].X_Z[9] = row[i].Ar_massFrac / row[i].total_metal_massFrac;	//row[i].X_Ar 
+			row[i].X_Z[10] = row[i].Ca_massFrac / row[i].total_metal_massFrac;	//row[i].X_Ca 
+			row[i].X_Z[11] = row[i].Cr_massFrac / row[i].total_metal_massFrac;	//row[i].X_Cr 
+			row[i].X_Z[12] = row[i].Mn_massFrac / row[i].total_metal_massFrac;	//row[i].X_Mn 
+			row[i].X_Z[13] = row[i].Fe_massFrac / row[i].total_metal_massFrac;	//row[i].X_Fe 
+			row[i].X_Z[14] = row[i].Ni_massFrac / row[i].total_metal_massFrac;	//row[i].X_Ni 
+			
+			//std::cout << "Row number " << i << std::endl;	
+			//std::cout << row[i].X_C  << std::endl;  
+	                //std::cout << row[i].X_N  << std::endl;
+	                //std::cout << row[i].X_O  << std::endl;
+	                //std::cout << row[i].X_Ne << std::endl;
+	                //std::cout << row[i].X_Na << std::endl;
+	                //std::cout << row[i].X_Mg << std::endl;
+	                //std::cout << row[i].X_Al << std::endl;
+	                //std::cout << row[i].X_Si << std::endl;
+	                //std::cout << row[i].X_S  << std::endl;
+	                //std::cout << row[i].X_Ar << std::endl;
+	                //std::cout << row[i].X_Ca << std::endl;
+	                //std::cout << row[i].X_Cr << std::endl;
+	                //std::cout << row[i].X_Mn << std::endl;
+	                //std::cout << row[i].X_Fe << std::endl;
+	                //std::cout << row[i].X_Ni << std::endl;
+			//std::cout << std::endl;
+					
+                        std::cout << "[INFO] Choosing the closest opacity file... " << std::endl;
+			std::vector<DISVAL> OpFileDistVec;
+			for(int j=0; j < OpacityFiles.size(); j++) { 
+				OpFileDistVec.push_back(DISVAL());
+				OpFileDistVec.back().value = OpacityFiles[j];
+				double d = 0.0;
+                 		for(int k=0; k < 15; k++) {
+                         		d += SquaredDistance(row[i].X_Z[k],std::stod(XZ_VecForOpFile[j][k]));
+                 		}	 
+				OpFileDistVec.back().dist = std::sqrt(d);
+         		}
+			//std::sort(OpFileDistVec.begin(),OpFileDistVec.end(),SortDistances);
+			sort(OpFileDistVec.begin(),OpFileDistVec.end(),SortDistances);
+			std::string SelectedOpacityFile = OpFileDistVec[0].value;			
+
+			/*
+			OpFileDistVec now contains the opacity file names arranged in ascending order
+			of their distance to the metal mass fractions of this row.
+			*/
+			//std::vector<std::string> MatchedOpacityFiles;	
+			
+			//MatchedOpacityFile.push_back(std::string);
+			//MatchedOpacityFile.back() = OpFileDistVec[0].filename;
+			//MatchedOpacityFile.push_back(std::string);
+			//MatchedOpacityFile.back() = OpFileDistVec[1].filename;
+			//MatchedOpacityFile.push_back(std::string);
+			//MatchedOpacityFile.back() = OpFileDistVec[2].filename; 
+
+                        std::cout << "[INFO] Choosing the closest H mass fraction... " << std::endl;
+			std::vector<DISVAL> H_massFrac_distVec;
+			for(int j=0; j < H_massFrac_inOPfiles.size(); j++) { //H_massFrac_inOPfiles.size() = 126
+				double d = SquaredDistance(row[i].H_massFrac,H_massFrac_inOPfiles[j]);
+				H_massFrac_distVec.push_back(DISVAL());
+				H_massFrac_distVec.back().dist = std::sqrt(d);	
+				H_massFrac_distVec.back().value = std::to_string(H_massFrac_inOPfiles[j]);
+			}
+			std::sort(H_massFrac_distVec.begin(),H_massFrac_distVec.end(),SortDistances);
+			std::string SelectedHmassFrac = "";
+			if(H_massFrac_distVec.size() > 0){
+				SelectedHmassFrac = H_massFrac_distVec[0].value;
+			}
+
+                        std::cout << "[INFO] Choosing the closest He mass fraction... " << std::endl;
+			std::vector<DISVAL> He_massFrac_distVec;
+			for(int j=0; j < He_massFrac_inOPfiles.size(); j++) { //He_massFrac_inOPfiles.size() = 126
+				double d = SquaredDistance(row[i].He_massFrac,He_massFrac_inOPfiles[j]);
+				He_massFrac_distVec.push_back(DISVAL());
+				He_massFrac_distVec.back().dist = std::sqrt(d);	
+				He_massFrac_distVec.back().value = std::to_string(He_massFrac_inOPfiles[j]);
+			}
+			std::sort(He_massFrac_distVec.begin(),He_massFrac_distVec.end(),SortDistances);
+			std::string SelectedHemassFrac = "";
+			if(He_massFrac_distVec.size() > 0) {
+				SelectedHemassFrac = He_massFrac_distVec[0].value;
+			}
+
+                        std::cout << "[INFO] Choosing the closest log R value... " << std::endl;
+			std::vector<DISVAL> logR_distVec;
+			for(int j=0; j < logR.size(); j++) { //logR.size() = 18
+				double x = std::log(row[i].density) - std::log(row[i].temp) + 6; 
+				/* x stores the density in a form that makes is comparable to how it is defined
+				in the opacity tables: x = log R = log( row[i].density / (row[i].temp * 10e-6) ) */ 
+				double d = SquaredDistance(x,logR[j]);	
+				logR_distVec.push_back(DISVAL());	
+				logR_distVec.back().dist = std::sqrt(d);	
+				//logR_distVec.back().value = std::to_string(logR[j]);	
+				logR_distVec.back().value = std::to_string(j);//index of the logR value	
+			}
+			std::sort(logR_distVec.begin(),logR_distVec.end(),SortDistances);
+			std::string SelectedlogR = logR_distVec[0].value;
+
+
+                        std::cout << "[INFO] Choosing the closest log T value... " << std::endl;
+			std::vector<DISVAL> logT_distVec;
+			for(int j=0; j < logT.size(); j++) { //logT.size() = 70
+				double d = SquaredDistance(std::log(row[i].temp),logT[j]);
+				logT_distVec.push_back(DISVAL());	
+				logT_distVec.back().dist = std::sqrt(d);	
+				//logT_distVec.back().value = std::to_string(logT[j]);	
+				logT_distVec.back().value = std::to_string(j);//index of the logT value	
+			}
+			std::sort(logT_distVec.begin(),logT_distVec.end(),SortDistances);
+			std::string SelectedlogT = logT_distVec[0].value;
+
+
+			// Add up all the distances to find the least distance!
+			//std::vector<DISVAL> TotalDistVec;
+			//for(j=0; j<3; j++) {
+			//TotalDistVec.push_back(DISVAL);
+			//TotalDistVec.back().dist = sqrt( std::pow(OpFileDistVec[0].dist,2) + std::pow(H_massFrac_distVec[0].dist,2) + std::pow(He_massFrac_distVec[0].dist,2) + std::pow(logR_distVec[0].dist,2) + std::pow(logT_distVec[0].dist,2) );
+			//TotalDistVec.value = OpFileDistVec[j].value;
+			//}
+			//sort(TotalDistVec.begin(),TotalDistVec.end(),SortDistances);
+			
+                        std::cout << "[INFO] Calling the function to access the chosen opacity file and obtain the opacity value for the chosen H and He mass fractions, log R and log T values..." << std::endl;
+			row[i].opacity_value = AccessOpacityFile(SelectedOpacityFile, SelectedHmassFrac, SelectedHemassFrac, SelectedlogR, SelectedlogT);
+	
+			std::cout << "Opacity xsec stored for this row!" << std::endl;
+
 			std::cout << std::endl;	
                         ++i;
-		}
-                ++lineNumber;
-	}
-
-
-}
-
-int SolarModel::MetalMassFraction() {
-
-        std::cout << "[DEBUG] Row size: " << row.size() << std::endl;
-        
-	for(int i=0; i < row.size(); i++) {
-	
-		double total_massFrac = row[i].H_massFrac + row[i].He4_massFrac + row[i].He3_massFrac + row[i].C12_massFrac + row[i].C13_massFrac + row[i].N14_massFrac + row[i].N15_massFrac + row[i].O16_massFrac + row[i].O17_massFrac + row[i].O18_massFrac + row[i].Ne_massFrac + row[i].Na_massFrac + row[i].Mg_massFrac + row[i].Al_massFrac + row[i].Si_massFrac + row[i].P_massFrac + row[i].S_massFrac + row[i].Cl_massFrac + row[i].Ar_massFrac + row[i].K_massFrac + row[i].Ca_massFrac + row[i].Sc_massFrac + row[i].Ti_massFrac + row[i].V_massFrac + row[i].Cr_massFrac + row[i].Mn_massFrac + row[i].Fe_massFrac + row[i].Co_massFrac + row[i].Ni_massFrac;
-		double non_metal_massFrac = row[i].H_massFrac + row[i].He_massFrac;
-		double metal_massFrac_actual = 1.0 - non_metal_massFrac; 
-		double metal_massFrac = row[i].C_massFrac + row[i].N_massFrac + row[i].O_massFrac + row[i].Ne_massFrac + row[i].Na_massFrac + row[i].Mg_massFrac + row[i].Al_massFrac + row[i].Si_massFrac + row[i].S_massFrac + row[i].Ar_massFrac + row[i].Ca_massFrac + row[i].Cr_massFrac + row[i].Mn_massFrac + row[i].Fe_massFrac + row[i].Ni_massFrac;
-		/* metal_massFrac_actual and metal_massFrac are not equal
-		   the former is slightly larger than the latter (difference is of the order 10**-5)
-		   reason: while summing for metal_massFrac, we are inlcuding only those elements 
-		   which are available in the opacity tables
-		   for our purposes, we will consider the metal_massFrac as the total metal mass frac
-		   reason: that's what corresponds to the opacity tables */
-
-		//std::cout << "[DEBUG] total massFrac: " << total_massFrac << std::endl;
-		//std::cout << "[DEBUG] H_massFrac: " << row[i].H_massFrac << std::endl;
-		//std::cout << "[DEBUG] He_massFrac: " << row[i].He_massFrac << std::endl;
-		//std::cout << "[DEBUG] C_massFrac: " << row[i].C_massFrac << std::endl;
-		//std::cout << "[DEBUG] N_massFrac: " << row[i].N_massFrac << std::endl;
-		//std::cout << "[DEBUG] O_massFrac: " << row[i].O_massFrac << std::endl;	
-		//std::cout << "[DEBUG] Non-metal massFrac: " << non_metal_massFrac << std::endl;
-		//std::cout << "[DEBUG] Metal massFrac: " << metal_massFrac << std::endl;
-		//std::cout << "[DEBUG] Metal massFrac summed: " << metal_massFrac_summed << std::endl;
-		
-		row[i].total_metal_massFrac = metal_massFrac;
-		for(int j=0;j<15;j++)
-			row[i].X_Z.push_back(0.0);
-		row[i].X_Z[0] = row[i].C_massFrac  / row[i].total_metal_massFrac;	//row[i].X_C  
-		row[i].X_Z[1] = row[i].N_massFrac  / row[i].total_metal_massFrac;	//row[i].X_N  
-		row[i].X_Z[2] = row[i].O_massFrac  / row[i].total_metal_massFrac;	//row[i].X_O  
-		row[i].X_Z[3] = row[i].Ne_massFrac / row[i].total_metal_massFrac;	//row[i].X_Ne 
-		row[i].X_Z[4] = row[i].Na_massFrac / row[i].total_metal_massFrac;	//row[i].X_Na 
-		row[i].X_Z[5] = row[i].Mg_massFrac / row[i].total_metal_massFrac;	//row[i].X_Mg 
-		row[i].X_Z[6] = row[i].Al_massFrac / row[i].total_metal_massFrac;	//row[i].X_Al 
-		row[i].X_Z[7] = row[i].Si_massFrac / row[i].total_metal_massFrac;	//row[i].X_Si 
-		row[i].X_Z[8] = row[i].S_massFrac  / row[i].total_metal_massFrac;	//row[i].X_S  
-		row[i].X_Z[9] = row[i].Ar_massFrac / row[i].total_metal_massFrac;	//row[i].X_Ar 
-		row[i].X_Z[10] = row[i].Ca_massFrac / row[i].total_metal_massFrac;	//row[i].X_Ca 
-		row[i].X_Z[11] = row[i].Cr_massFrac / row[i].total_metal_massFrac;	//row[i].X_Cr 
-		row[i].X_Z[12] = row[i].Mn_massFrac / row[i].total_metal_massFrac;	//row[i].X_Mn 
-		row[i].X_Z[13] = row[i].Fe_massFrac / row[i].total_metal_massFrac;	//row[i].X_Fe 
-		row[i].X_Z[14] = row[i].Ni_massFrac / row[i].total_metal_massFrac;	//row[i].X_Ni 
-		
-		std::cout << "Row number " << i << std::endl;	
-		std::cout << row[i].X_C  << std::endl;  
-                std::cout << row[i].X_N  << std::endl;
-                std::cout << row[i].X_O  << std::endl;
-                std::cout << row[i].X_Ne << std::endl;
-                std::cout << row[i].X_Na << std::endl;
-                std::cout << row[i].X_Mg << std::endl;
-                std::cout << row[i].X_Al << std::endl;
-                std::cout << row[i].X_Si << std::endl;
-                std::cout << row[i].X_S  << std::endl;
-                std::cout << row[i].X_Ar << std::endl;
-                std::cout << row[i].X_Ca << std::endl;
-                std::cout << row[i].X_Cr << std::endl;
-                std::cout << row[i].X_Mn << std::endl;
-                std::cout << row[i].X_Fe << std::endl;
-                std::cout << row[i].X_Ni << std::endl;
-		std::cout << std::endl;
+		}	
+	        ++lineNumber;
 	}
 }
 
+/*----------------------------------------------------------------------------------------
+This function reads all the opacity filenames, extracts the metal mass fractions from them
+and stores them in a vector of string vectors called XZ_VecForOpFile where each element is 
+a vector of the mass fractions corresponding to the opacity file denoted by its position.
+The opacity filenames are stored in a global vector called OpacityFiles. 
+----------------------------------------------------------------------------------------*/
 void SolarModel::ReadOpacityFileName(){
 
-	//for(int i=0; i < OpacityFiles.size(); i++) {
-	for(int i=0; i < 20; i++) {
+	for(int i=0; i < OpacityFiles.size(); i++) {
+	//for(int i=0; i < 20; i++)  {
 		//std::vector<std::string> X_Z;
 		std::cout << "Reading filename: " << OpacityFiles[i] << std::endl;
 		sthttp://www.cplusplus.com/forum/beginner/68340/d::string name = OpacityFiles[i];	
@@ -132,11 +255,22 @@ void SolarModel::ReadOpacityFileName(){
 		//XZ_VecForOpFile.push_back(std::vector<std::string>);
 		std::vector<std::string> X_Z;
 		XZ_VecForOpFile.push_back(X_Z);
+		
+		std::cout << "DEBUG 1" << std::endl;
 
+		std::vector<double> X_Z_numeric;
+		XZ_VecForOpFile_numeric.push_back(X_Z_numeric); 
+
+		std::cout << "DEBUG 2" << std::endl;
+		
+		std::string name = OpacityFiles[i];
 		std::size_t start_pos = name.find("OP17") + 5;
 		std::size_t end_pos = name.find("-",start_pos+1); // no need to check for E- for the first end_pos because
 							 	  // the carbon mass fraction is given in full decimals
 								  // and not in E notation for the files I have 
+		
+		std::cout << "DEBUG 3" << std::endl;
+	
 		std::size_t possible_end_pos = 0;
 		//std::cout << "[DEBUG] " << "end_pos: " << end_pos << std::endl;
 		//std::cout << "[DEBUG] " << "end: " << name.find("stored") << std::endl;
@@ -144,15 +278,20 @@ void SolarModel::ReadOpacityFileName(){
 		
 		//std::cout << "[DEBUG] " << "name.find(\"stored\"): " << name.find("stored") << std::endl;
 
+		std::cout << "DEBUG 4" << std::endl;
+
 		while(end_pos < name.find("stored")) {
 
 			//std::cout << "[DEBUG] " << start_pos << std::endl;
 			//std::cout << "[DEBUG] " << end_pos << std::endl;
 
+			std::cout << "DEBUG 5" << std::endl;
+			
 			std::string cooz = name.substr(start_pos,end_pos-start_pos);
 			//std::cout << "[DEBUG] " << cooz << std::endl;
 
 			X_Z.push_back(cooz);
+			X_Z_numeric.push_back(std::stod(cooz));
 
 			start_pos = end_pos + 1;	
 			possible_end_pos = name.find("-",start_pos+1);
@@ -170,84 +309,249 @@ void SolarModel::ReadOpacityFileName(){
 		}
 
 		//std::cout << "[DEBUG] " << "Hi!" << start_pos << "\t" << end_pos << std::endl;
-		std::cout << name.length() << std::endl;
+		std::cout << "DEBUG 6" << name.length() << std::endl;
+		std::cout << "DEBUG 7" << std::endl;
 		std::string lastcooz = name.substr(start_pos,name.length()-7-start_pos);
 		//std::cout << "[DEBUG] " << lastcooz << std::endl;	
 		X_Z.push_back(lastcooz);
+		X_Z_numeric.push_back(std::stod(lastcooz));
 		//std::cout << "[DEBUG] " << "Length of string vector: " << X_Z.size() << std::endl;	
 		XZ_VecForOpFile.back() = X_Z;
+		XZ_VecForOpFile_numeric.back() = X_Z_numeric;
 		//std::cout << "[DEBUG] " << "XZ_VecForOpFile stored" << std::endl;
 		//std::cout << "[DEBUG] " << X_Z[0] << std::endl;
 		//std::cout << "[DEBUG] " << XZ_VecForOpFile[0][0] << std::endl;
+		std::cout << "DEBUG 8" << std::endl;
 	}	
 
 	std::cout << std::endl;
+	std::cout << "OpacityFiles.size() = " << OpacityFiles.size() << std::endl; 
+	std::cout << "XZ_VecForOpFile.size() = " << XZ_VecForOpFile.size() << std::endl; 
 
-	//for(int i=0; i < OpacityFiles.size(); i++) {
-	for(int i=0; i < 20; i++) {
+	for(int i=0; i < OpacityFiles.size(); i++) {
+	//for(int i=0; i < 20; i++) {
 		std::cout << "File: " << OpacityFiles[i] << std::endl;
 		for(int j=0; j < 15; j++) {
 			std::cout << "XZ_VecForOpFile: " << XZ_VecForOpFile[i][j] << std::endl;
+			std::cout << "XZ_VecForOpFile_numeric: " << XZ_VecForOpFile_numeric[i][j] << std::endl;
 		}
 		std::cout << "End of file" << std::endl;
-	}
+	} 
 }
 
-int SolarModel::GetTableIndex() {
+/*
+compare XZ vector for ith row with XZ vector for jth file
+find distance between row[i].X_Z[k] and XZ_VecForOpFile[j][k]
+*/
 
-        int lineNumber = 0;
+/*----------------------------------------------------------------------------------------
+This function compares the metal mass fraction vectors for a row from the Solar Model 
+to those extracted from the opacity filenames. The latter have to be first coverted
+to numeric type with the correct precision before making the comparison.
+
+For every row, a distance is computed and stored corresponding to every opacity filename.
+The distances are then sorted such that we can choose the filename with the least distance
+for that row. 
+-----------------------------------------------------------------------------------------*/	
+/*int SolarModel::CompareMetalMassFractions() { 
+	
+	for(int i=0; i < OpacityFiles.size(); i++) {
+		for(int j=0; j < 15; j++) {
+			SquareDistance(row[i],XZ_VecForOpFile[i][j]
+		}	
+	}
+
+}*/
+
+
+//double AccessOpacityFile(std::string s, std::string H, std::string He, std::string R, std::string T) {
+double SolarModel::AccessOpacityFile(std::string s, std::string H, std::string He, std::string R, std::string T) {
+
+        int lineNumber = 1;
         int posX = 0;
         int posY = 0;
-	std::vector<std::string> tableIndex;
+	std::string tableIndex;
+	std::string selected_tableIndex;
+	//std::vector<std::string> tableIndex;
+			
 
-	for(int i=0; i < row.size(); i++) {
-		/*
-			for each row, compare the computed metal mass fractions
-			with the extracted X_Z for from every opacity file
-			and the H and He mass fractions of every table inside
-			and the R and T 
-			find the 5 closest matching sets 
-		*/        
-	
-		for(int j=0; j < OpacityFiles.size(); j++) {
-        		int match=0;
-			for(int k=0; k<15; k++){
+	std::ifstream opacity_file;
+	opacity_file.open(s.c_str());
 
-				if(XZ_VecForOpFile[j][k] == row[i].X_Z[k]){
-					++match;
-				}
-				if(match == 15){
-		
-					opacity_file.open(OpacityFiles[j].c_str());
-				
-        				if(!opacity_file.good()){
-                				std::cout << "Problem with file!" << std::endl;
-                				return 1;
-        				}
+	std::cout << "[INFO] Accessing opacity file: " << s.c_str() << std::endl;
+	std::cout << "[INFO] Looking for H mass fraction: " << H << std::endl;
+	std::cout << "[INFO] Looking for He mass fraction: " << He << std::endl;
+	std::cout << "[INFO] Looking for log R value: " << logR[std::stoi(R)] << std::endl;
+	std::cout << "[INFO] Looking for log T value: " << logT[std::stoi(T)] << std::endl;
 
-        				while(!opacity_file.eof()){
-                				std::getline(opacity_file, op_line);
-                				++lineNumber;
+	if(!opacity_file.good()){
+		std::cout << "Problem with file!" << std::endl;
+		return 1;
+	}
 
-                				if(lineNumber > 63 && lineNumber < 189){
-                        	
-                                			std::string tableIndex;
-                                			posX = line.find("X");
-                                			posY = line.find("Y");
-                                			std::string _H_massFrac = line.substr(posX+2,6);
-                                			std::string _He_massFrac = line.substr(posY+2,6);
-                                			if(std::stod(_H_massFrac) == row[i].H_massFrac && std::stod(_He_massFrac) == row[i].He_massFrac){
-                                        			tableIndex.push_back(line.substr(8,3));
-                                        			//select[i].tableIndex = tableIndex;
-                                        			//std::cout << "[DEBUG] Selected mass fraction of H: " << select[i].H_massFrac << std::endl;
-                                        			//std::cout << "[DEBUG] Selected mass fraction of He: " << select[i].He_massFrac << std::endl;
-                                        			//std::cout << "[DEBUG] Selected table: " << select[i].tableIndex << std::endl;
-                                			}	
-                        			}
-        				}
-        				opacity_file.close();
-				}	
-			}
+	while(!opacity_file.eof()){
+		std::string op_line = "";
+		std::getline(opacity_file, op_line);
+                std::istringstream iss_op_line(op_line);
+
+		//std::cout << "[INFO] Finding table index by comparing the H and He mass fractions..." << std::endl;
+		if(lineNumber > 63 && lineNumber < 189){
+
+			posX = op_line.find("X");
+			posY = op_line.find("Y");
+			std::string _H_massFrac = op_line.substr(posX+2,6);
+			std::string _He_massFrac = op_line.substr(posY+2,6);
+			//std::cout << "[DEBUG] _H_massFrac: " << _H_massFrac << std::endl;
+			//std::cout << "[DEBUG] _He_massFrac: " << _He_massFrac << std::endl;
+			
+			//if(std::stod(_H_massFrac) == row[i].H_massFrac && std::stod(_He_massFrac) == row[i].He_massFrac){
+			//if(std::stod(_H_massFrac) == H.c_str() && std::stod(_He_massFrac) == He.c_str()){
+			//if(_H_massFrac == H.c_str() && _He_massFrac == He.c_str()){
+			if(std::stod(_H_massFrac) == std::stod(H) && std::stod(_He_massFrac) == std::stod(He)){
+        			selected_tableIndex = op_line.substr(8,3);
+				//tableIndex.push_back(line.substr(8,3));
+        			//select[i].tableIndex = tableIndex;
+        			//std::cout << "[DEBUG] Selected mass fraction of H: " << select[i].H_massFrac << std::endl;
+        			//std::cout << "[DEBUG] Selected mass fraction of He: " << select[i].He_massFrac << std::endl;
+       				std::cout << "[INFO] Selected table: " << selected_tableIndex << std::endl;
+       				//std::cout << "[DEBUG] Aur kuch? " << std::endl;
+       			}	
+       			//std::cout << "[DEBUG] nAHI, BATA NA, Aur kuch? " << lineNumber << std::endl;
+			
 		}
+		
+		//std::cout << "Selected table number: " << selected_tableIndex << std::endl; 
+		//std::cout << "Locating the selected table in the opacity file..." << selected_tableIndex << std::endl; 
+
+		if(lineNumber > 240) {
+
+			//std::string tableIndex;
+			std::string opacity_xsec = "";
+                        std::size_t posTableIndex = op_line.find("TABLE");
+			int startTable_lineNumber = 0;                                 
+
+                        if (posTableIndex!=std::string::npos){ // 1. if at the first line of a table
+                        	//std::cout << "DEBUG: at first line of a table " << line << std::endl;
+                                tableIndex = op_line.substr(posTableIndex+7,3);
+                                if(tableIndex == selected_tableIndex){ // 1.a) if at the start of a table we want to access
+                                	//std::cout << "DEBUG: at first line of a table we want to access" << std::endl;
+                                        //std::cout << "DEBUG: " << line << std::endl;
+                                        //s << line << std::endl;
+                                        //select[i].lineNumber = lineNumber; // storing the location of start of that table
+                                        startTable_lineNumber = lineNumber; // storing the location of start of that table
+                                        std::cout << "Selected table starts on line" << lineNumber << std::endl;
+                                                 //foundTable = true;
+                                }
+                                else { // 1.b) if at the start of a table we don't want to access
+                                       //std::cout << "DEBUG: at the start of a table we don't want to access" << std::endl;
+                                	continue;
+                                }
+			}
+                        else { // 2. if inside a table
+                               //std::cout << "DEBUG: inside a table" << std::endl;
+                        	if(lineNumber > startTable_lineNumber+5 && lineNumber < startTable_lineNumber+76 ) { // 2.a) if inside a table we want to access
+                                	//std::cout << "[INFO] Inside a table we want to access" << std::endl;
+                                        //s << line << std::endl;
+                                        //std::cout << "DEBUG: " << line << std::endl;
+                        		std::vector<std::string> row_in_OPtable;
+					iss_op_line >> row_in_OPtable[0] >> row_in_OPtable[1] >> row_in_OPtable[2] >> row_in_OPtable[3] >> row_in_OPtable[4] >> row_in_OPtable[5] >> row_in_OPtable[6] >> row_in_OPtable[7] >> row_in_OPtable[8] >> row_in_OPtable[9] >> row_in_OPtable[10] >> row_in_OPtable[11] >> row_in_OPtable[12] >> row_in_OPtable[13] >> row_in_OPtable[14] >> row_in_OPtable[15] >> row_in_OPtable[16] >> row_in_OPtable[17] >> row_in_OPtable[18] >> row_in_OPtable[19];   
+					std::string OPtable_temp = row_in_OPtable[0];
+					//if(row_in_OPtable[0] == logT[std::stoi(T)])
+					std::cout << "OPtable_temp: " << OPtable_temp << std::endl;
+					if(std::stod(OPtable_temp) == logT[std::stoi(T)]) {
+						opacity_xsec = row_in_OPtable[std::stoi(R)+1];
+						std::cout << "[INFO] Found the best opacity xsec value for this row: " << opacity_xsec << std::endl;
+						return std::stod(opacity_xsec);
+					}
+				}
+                                else { // 2.b) if inside a table we don't want to access
+                                       //std::cout << "DEBUG: inside a table we don't want to access" << std::endl;
+                                }
+			}			
+		}
+	++lineNumber;	
 	}
 }
+
+
+
+/*
+int ReadOpacityFile::ReadAndStoreTable() {
+
+        for(int i = 0; i < input; i++){
+
+        	int lineNumber = 0;
+        	int posTableIndex = 0;
+
+        	in_file.open(in_filename.c_str());
+	
+	        if(!in_file.good()){
+	                std::cout << "Problem with file!" << std::endl;
+	                return 1;
+	        }
+
+                std::stringstream s;
+                std::ofstream out_file;
+                std::string out_filename = "../resources/extracted_tables/" + select[i].H_massFrac + "-" + select[i].He_massFrac + "-" + in_filename.substr(32,60) + ".stored";
+                out_file.open(out_filename);
+
+                while(!in_file.eof()){
+                        std::getline(in_file, line);
+                        ++lineNumber;
+                        if(lineNumber > 240 ){
+
+                                std::string tableIndex;
+                                std::size_t posTableIndex = line.find("TABLE");
+
+                                if (posTableIndex!=std::string::npos){ // 1. if at the first line of a table
+					//std::cout << "DEBUG: at first line of a table " << line << std::endl;
+				        tableIndex = line.substr(posTableIndex+7,3);
+                                        if(tableIndex == select[i].tableIndex){	// 1.a) if at the start of a table we want to access
+                                                //std::cout << "DEBUG: at first line of a table we want to access" << std::endl;
+						//std::cout << "DEBUG: " << line << std::endl;
+						s << line << std::endl;
+                                                select[i].lineNumber = lineNumber; // storing the location of start of that table
+                                                std::cout << "Table number " << tableIndex << " starts on line " << lineNumber << std::endl;
+                                                //foundTable = true;
+                                        }
+					else { // 1.b) if at the start of a table we don't want to access
+						//std::cout << "DEBUG: at the start of a table we don't want to access" << std::endl;
+						continue;
+                                	}
+				}
+                                else { // 2. if inside a table
+					//std::cout << "DEBUG: inside a table" << std::endl;
+					if(lineNumber < select[i].lineNumber+76) { // 2.a) if inside a table we want to access
+                                		//std::cout << "DEBUG: inside a table we want to access" << std::endl;
+						s << line << std::endl;
+						//std::cout << "DEBUG: " << line << std::endl;
+                                	}
+					else { // 2.b) if inside a table we don't want to access
+						//std::cout << "DEBUG: inside a table we don't want to access" << std::endl;
+					}
+				}
+                        }
+                } 
+                std::cout << "Finished parsing table" << std::endl;
+                std::cout << "Storing the parsed table " << select[i].tableIndex << " in ouput file " << out_filename << std::endl;
+                out_file << s.str() << std::endl;
+                out_file.close();
+                std::cout << "Output file closed" << std::endl;
+                in_file.close();
+                std::cout << "Input file closed" << std::endl;
+        }
+
+        std::cout << "Done!" << std::endl;
+
+
+
+
+
+	
+		++lineNumber;
+
+
+	}
+	opacity_file.close();
+}       
+*/
