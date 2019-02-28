@@ -52,8 +52,9 @@ int SolarModel::AccessSolarModel() {
 	}
 
         std::cout << "[INFO] Reading solar model file... " << std::endl;
+	//++lineNumber;
 
-        while(!solarmodel_file.eof() && lineNumber < 25) {
+        while(!solarmodel_file.eof() /*&& lineNumber < 100*/) {
 		std::getline(solarmodel_file, line);
                 std::istringstream iss_line(line);
                 if(line.find("#")==0 || line.empty()) {
@@ -229,7 +230,7 @@ int SolarModel::AccessSolarModel() {
                         std::cout << "[INFO] Calling the function to access the chosen opacity file and obtain the opacity value for the chosen H and He mass fractions, log R and log T values..." << std::endl;
 			row[i].opacity_value = AccessOpacityFile(SelectedOpacityFile, SelectedHmassFrac, SelectedHemassFrac, SelectedlogR, SelectedlogT);
 	
-			std::cout << "Opacity xsec stored for this row!" << std::endl;
+			std::cout << "Opacity xsec stored for this row: " << row[i].opacity_value << std::endl;
 
 			std::cout << std::endl;	
                         ++i;
@@ -256,12 +257,12 @@ void SolarModel::ReadOpacityFileName(){
 		std::vector<std::string> X_Z;
 		XZ_VecForOpFile.push_back(X_Z);
 		
-		std::cout << "DEBUG 1" << std::endl;
+		//std::cout << "DEBUG 1" << std::endl;
 
 		std::vector<double> X_Z_numeric;
 		XZ_VecForOpFile_numeric.push_back(X_Z_numeric); 
 
-		std::cout << "DEBUG 2" << std::endl;
+		//std::cout << "DEBUG 2" << std::endl;
 		
 		std::string name = OpacityFiles[i];
 		std::size_t start_pos = name.find("OP17") + 5;
@@ -269,7 +270,7 @@ void SolarModel::ReadOpacityFileName(){
 							 	  // the carbon mass fraction is given in full decimals
 								  // and not in E notation for the files I have 
 		
-		std::cout << "DEBUG 3" << std::endl;
+		//std::cout << "DEBUG 3" << std::endl;
 	
 		std::size_t possible_end_pos = 0;
 		//std::cout << "[DEBUG] " << "end_pos: " << end_pos << std::endl;
@@ -278,14 +279,14 @@ void SolarModel::ReadOpacityFileName(){
 		
 		//std::cout << "[DEBUG] " << "name.find(\"stored\"): " << name.find("stored") << std::endl;
 
-		std::cout << "DEBUG 4" << std::endl;
+		//std::cout << "DEBUG 4" << std::endl;
 
 		while(end_pos < name.find("stored")) {
 
 			//std::cout << "[DEBUG] " << start_pos << std::endl;
 			//std::cout << "[DEBUG] " << end_pos << std::endl;
 
-			std::cout << "DEBUG 5" << std::endl;
+			//std::cout << "DEBUG 5" << std::endl;
 			
 			std::string cooz = name.substr(start_pos,end_pos-start_pos);
 			//std::cout << "[DEBUG] " << cooz << std::endl;
@@ -309,8 +310,8 @@ void SolarModel::ReadOpacityFileName(){
 		}
 
 		//std::cout << "[DEBUG] " << "Hi!" << start_pos << "\t" << end_pos << std::endl;
-		std::cout << "DEBUG 6" << name.length() << std::endl;
-		std::cout << "DEBUG 7" << std::endl;
+		//std::cout << "DEBUG 6" << name.length() << std::endl;
+		//std::cout << "DEBUG 7" << std::endl;
 		std::string lastcooz = name.substr(start_pos,name.length()-7-start_pos);
 		//std::cout << "[DEBUG] " << lastcooz << std::endl;	
 		X_Z.push_back(lastcooz);
@@ -321,7 +322,7 @@ void SolarModel::ReadOpacityFileName(){
 		//std::cout << "[DEBUG] " << "XZ_VecForOpFile stored" << std::endl;
 		//std::cout << "[DEBUG] " << X_Z[0] << std::endl;
 		//std::cout << "[DEBUG] " << XZ_VecForOpFile[0][0] << std::endl;
-		std::cout << "DEBUG 8" << std::endl;
+		//std::cout << "DEBUG 8" << std::endl;
 	}	
 
 	std::cout << std::endl;
@@ -367,7 +368,8 @@ for that row.
 //double AccessOpacityFile(std::string s, std::string H, std::string He, std::string R, std::string T) {
 double SolarModel::AccessOpacityFile(std::string s, std::string H, std::string He, std::string R, std::string T) {
 
-        int lineNumber = 1;
+        int lineNumber = 0;
+	int startTable_lineNumber = 0;                                 
         int posX = 0;
         int posY = 0;
 	std::string tableIndex;
@@ -394,6 +396,7 @@ double SolarModel::AccessOpacityFile(std::string s, std::string H, std::string H
 		std::getline(opacity_file, op_line);
                 std::istringstream iss_op_line(op_line);
 
+		++lineNumber;	
 		//std::cout << "[INFO] Finding table index by comparing the H and He mass fractions..." << std::endl;
 		if(lineNumber > 63 && lineNumber < 189){
 
@@ -424,11 +427,11 @@ double SolarModel::AccessOpacityFile(std::string s, std::string H, std::string H
 		//std::cout << "Locating the selected table in the opacity file..." << selected_tableIndex << std::endl; 
 
 		if(lineNumber > 240) {
+		//if(lineNumber > 3850 && lineNumber < 3950) { //testing for table 48
 
 			//std::string tableIndex;
 			std::string opacity_xsec = "";
                         std::size_t posTableIndex = op_line.find("TABLE");
-			int startTable_lineNumber = 0;                                 
 
                         if (posTableIndex!=std::string::npos){ // 1. if at the first line of a table
                         	//std::cout << "DEBUG: at first line of a table " << line << std::endl;
@@ -438,8 +441,13 @@ double SolarModel::AccessOpacityFile(std::string s, std::string H, std::string H
                                         //std::cout << "DEBUG: " << line << std::endl;
                                         //s << line << std::endl;
                                         //select[i].lineNumber = lineNumber; // storing the location of start of that table
+					//std::cout << "[DEBUG 1] tableIndex: " << tableIndex << std::endl;
+					//std::cout << "[DEBUG 2] selected_tableIndex: " << selected_tableIndex << std::endl;
+					//std::cout << "[DEBUG 3] lineNumber " << lineNumber << std::endl;
                                         startTable_lineNumber = lineNumber; // storing the location of start of that table
-                                        std::cout << "Selected table starts on line" << lineNumber << std::endl;
+                                        //std::cout << "[DEBUG 4] Selected table starts on line: " << startTable_lineNumber << std::endl;
+                                	//std::cout << "[DEBUG 5] startTable_lineNumber+5 " << startTable_lineNumber+5 << std::endl;
+                                	//std::cout << "[DEBUG 6] startTable_lineNumber+76 " << startTable_lineNumber+76 << std::endl;
                                                  //foundTable = true;
                                 }
                                 else { // 1.b) if at the start of a table we don't want to access
@@ -448,16 +456,31 @@ double SolarModel::AccessOpacityFile(std::string s, std::string H, std::string H
                                 }
 			}
                         else { // 2. if inside a table
-                               //std::cout << "DEBUG: inside a table" << std::endl;
+                                //std::cout << "[DEBUG] inside a table" << std::endl;
+                                //std::cout << "[DEBUG] line number " << lineNumber << std::endl;
+                                //std::cout << "[DEBUG] startTable_lineNumber " << startTable_lineNumber << std::endl;
+                                //std::cout << "[DEBUG] line number " << lineNumber << std::endl;
+				//std::cout << "[DEBUG 7] startTable_lineNumber+5 " << startTable_lineNumber+5 << std::endl;
+                                //std::cout << "[DEBUG 8] startTable_lineNumber+76 " << startTable_lineNumber+76 << std::endl;
+                        	//if(lineNumber > startTable_lineNumber+5 ) {std::cout << "[DEBUG 9] line number: " << lineNumber << " and lineNumber > startTable_lineNumber+5" << std::endl;}
+                        	//if(lineNumber < startTable_lineNumber+76 ) {std::cout << "[DEBUG 10] lineNumber: " << lineNumber << " and lineNumber < startTable_lineNumber+76" << std::endl;}
                         	if(lineNumber > startTable_lineNumber+5 && lineNumber < startTable_lineNumber+76 ) { // 2.a) if inside a table we want to access
                                 	//std::cout << "[INFO] Inside a table we want to access" << std::endl;
                                         //s << line << std::endl;
                                         //std::cout << "DEBUG: " << line << std::endl;
+					//std::cout << " [INFO] lineNumber: " << lineNumber << std::endl;
                         		std::vector<std::string> row_in_OPtable;
-					iss_op_line >> row_in_OPtable[0] >> row_in_OPtable[1] >> row_in_OPtable[2] >> row_in_OPtable[3] >> row_in_OPtable[4] >> row_in_OPtable[5] >> row_in_OPtable[6] >> row_in_OPtable[7] >> row_in_OPtable[8] >> row_in_OPtable[9] >> row_in_OPtable[10] >> row_in_OPtable[11] >> row_in_OPtable[12] >> row_in_OPtable[13] >> row_in_OPtable[14] >> row_in_OPtable[15] >> row_in_OPtable[16] >> row_in_OPtable[17] >> row_in_OPtable[18] >> row_in_OPtable[19];   
+					std::string word = "";
+					while(iss_op_line >> word){
+						row_in_OPtable.push_back(word);
+					}
+					//std::cout << " [DEBUG 11]" << std::endl;
+					//iss_op_line >> row_in_OPtable[0] >> row_in_OPtable[1] >> row_in_OPtable[2] >> row_in_OPtable[3] >> row_in_OPtable[4] >> row_in_OPtable[5] >> row_in_OPtable[6] >> row_in_OPtable[7] >> row_in_OPtable[8] >> row_in_OPtable[9] >> row_in_OPtable[10] >> row_in_OPtable[11] >> row_in_OPtable[12] >> row_in_OPtable[13] >> row_in_OPtable[14] >> row_in_OPtable[15] >> row_in_OPtable[16] >> row_in_OPtable[17] >> row_in_OPtable[18] >> row_in_OPtable[19];   
+					//std::cout << " [DEBUG 12]" << std::endl;
 					std::string OPtable_temp = row_in_OPtable[0];
+					//std::cout << " [DEBUG 13]" << std::endl;
 					//if(row_in_OPtable[0] == logT[std::stoi(T)])
-					std::cout << "OPtable_temp: " << OPtable_temp << std::endl;
+					//std::cout << "[DEBUG 14] OPtable_temp: " << OPtable_temp << std::endl;
 					if(std::stod(OPtable_temp) == logT[std::stoi(T)]) {
 						opacity_xsec = row_in_OPtable[std::stoi(R)+1];
 						std::cout << "[INFO] Found the best opacity xsec value for this row: " << opacity_xsec << std::endl;
@@ -469,7 +492,6 @@ double SolarModel::AccessOpacityFile(std::string s, std::string H, std::string H
                                 }
 			}			
 		}
-	++lineNumber;	
 	}
 }
 
