@@ -23,6 +23,10 @@ double SquaredDistance(double x1, double x2){
 	return((x1-x2)*(x1-x2));
 }
 
+double ComputeDistance(double x1, double x2){
+	return(std::fabs(x1-x2));
+}
+
 bool SortDistances(DISVAL& v1, DISVAL& v2){
 	return (v1.dist < v2.dist);
 }
@@ -54,7 +58,7 @@ int SolarModel::AccessSolarModel() {
         std::cout << "[INFO] Reading solar model file... " << std::endl;
 	//++lineNumber;
 
-        while(!solarmodel_file.eof() /*&& lineNumber < 100*/) {
+        while(!solarmodel_file.eof() /*&& lineNumber < 50*/) {
 		std::getline(solarmodel_file, line);
                 std::istringstream iss_line(line);
                 if(line.find("#")==0 || line.empty()) {
@@ -161,12 +165,14 @@ int SolarModel::AccessSolarModel() {
 			//MatchedOpacityFile.push_back(std::string);
 			//MatchedOpacityFile.back() = OpFileDistVec[2].filename; 
 
+                        std::cout << "[INFO] H mass fraction of this row: " << row[i].H_massFrac << std::endl;
                         std::cout << "[INFO] Choosing the closest H mass fraction... " << std::endl;
 			std::vector<DISVAL> H_massFrac_distVec;
 			for(int j=0; j < H_massFrac_inOPfiles.size(); j++) { //H_massFrac_inOPfiles.size() = 126
-				double d = SquaredDistance(row[i].H_massFrac,H_massFrac_inOPfiles[j]);
+				//double d = SquaredDistance(row[i].H_massFrac,H_massFrac_inOPfiles[j]);
 				H_massFrac_distVec.push_back(DISVAL());
-				H_massFrac_distVec.back().dist = std::sqrt(d);	
+				//H_massFrac_distVec.back().dist = std::sqrt(d);	
+				H_massFrac_distVec.back().dist = ComputeDistance(row[i].H_massFrac,H_massFrac_inOPfiles[j]);
 				H_massFrac_distVec.back().value = std::to_string(H_massFrac_inOPfiles[j]);
 			}
 			std::sort(H_massFrac_distVec.begin(),H_massFrac_distVec.end(),SortDistances);
@@ -174,13 +180,16 @@ int SolarModel::AccessSolarModel() {
 			if(H_massFrac_distVec.size() > 0){
 				SelectedHmassFrac = H_massFrac_distVec[0].value;
 			}
+                        std::cout << "[INFO] H mass fraction found to be closest: " << SelectedHmassFrac << std::endl;
 
+                        std::cout << "[INFO] He mass fraction of this row: " << row[i].He_massFrac << std::endl;
                         std::cout << "[INFO] Choosing the closest He mass fraction... " << std::endl;
 			std::vector<DISVAL> He_massFrac_distVec;
 			for(int j=0; j < He_massFrac_inOPfiles.size(); j++) { //He_massFrac_inOPfiles.size() = 126
-				double d = SquaredDistance(row[i].He_massFrac,He_massFrac_inOPfiles[j]);
+				//double d = SquaredDistance(row[i].He_massFrac,He_massFrac_inOPfiles[j]);
 				He_massFrac_distVec.push_back(DISVAL());
-				He_massFrac_distVec.back().dist = std::sqrt(d);	
+				//He_massFrac_distVec.back().dist = std::sqrt(d);	
+				He_massFrac_distVec.back().dist = ComputeDistance(row[i].He_massFrac,He_massFrac_inOPfiles[j]);
 				He_massFrac_distVec.back().value = std::to_string(He_massFrac_inOPfiles[j]);
 			}
 			std::sort(He_massFrac_distVec.begin(),He_massFrac_distVec.end(),SortDistances);
@@ -188,34 +197,51 @@ int SolarModel::AccessSolarModel() {
 			if(He_massFrac_distVec.size() > 0) {
 				SelectedHemassFrac = He_massFrac_distVec[0].value;
 			}
+                        std::cout << "[INFO] He mass fraction found to be closest: " << SelectedHemassFrac << std::endl;
 
+                        std::cout << "[INFO] Density value of this row: " << row[i].density << std::endl;
+			double var = std::log10( row[i].density / (row[i].temp * 1e-6) ); 
+                        std::cout << "[INFO] log R value of this row: " << var << std::endl;
                         std::cout << "[INFO] Choosing the closest log R value... " << std::endl;
 			std::vector<DISVAL> logR_distVec;
 			for(int j=0; j < logR.size(); j++) { //logR.size() = 18
-				double x = std::log(row[i].density) - std::log(row[i].temp) + 6; 
 				/* x stores the density in a form that makes is comparable to how it is defined
 				in the opacity tables: x = log R = log( row[i].density / (row[i].temp * 10e-6) ) */ 
-				double d = SquaredDistance(x,logR[j]);	
+				//double d = SquaredDistance(x,logR[j]);	
 				logR_distVec.push_back(DISVAL());	
-				logR_distVec.back().dist = std::sqrt(d);	
+				//logR_distVec.back().dist = std::sqrt(d);	
+				logR_distVec.back().dist = ComputeDistance(var,logR[j]);	
 				//logR_distVec.back().value = std::to_string(logR[j]);	
 				logR_distVec.back().value = std::to_string(j);//index of the logR value	
 			}
 			std::sort(logR_distVec.begin(),logR_distVec.end(),SortDistances);
-			std::string SelectedlogR = logR_distVec[0].value;
+			std::string SelectedlogR = "";
+			if(logR_distVec.size() > 0) {
+				SelectedlogR = logR_distVec[0].value;
+                        }
+			std::cout << "[INFO] log R found to be closest: " << logR[std::stod(SelectedlogR)] << std::endl;
 
 
+                        std::cout << "[INFO] Temperature value of this row: " << row[i].temp << std::endl;
+                        std::cout << "[INFO] log T value of this row: " << std::log10(row[i].temp) << std::endl;
                         std::cout << "[INFO] Choosing the closest log T value... " << std::endl;
 			std::vector<DISVAL> logT_distVec;
 			for(int j=0; j < logT.size(); j++) { //logT.size() = 70
-				double d = SquaredDistance(std::log(row[i].temp),logT[j]);
+				//double d = SquaredDistance(std::log(row[i].temp),logT[j]);
 				logT_distVec.push_back(DISVAL());	
-				logT_distVec.back().dist = std::sqrt(d);	
+				//logT_distVec.back().dist = std::sqrt(d);	
+				logT_distVec.back().dist = ComputeDistance(std::log10(row[i].temp),logT[j]);
 				//logT_distVec.back().value = std::to_string(logT[j]);	
 				logT_distVec.back().value = std::to_string(j);//index of the logT value	
 			}
 			std::sort(logT_distVec.begin(),logT_distVec.end(),SortDistances);
-			std::string SelectedlogT = logT_distVec[0].value;
+			//std::string SelectedlogT = logT_distVec[0].value;
+			std::string SelectedlogT = "";
+			if(logT_distVec.size() > 0) {
+				SelectedlogT = logT_distVec[0].value;
+                        }
+			std::cout << "[INFO] log T found to be closest: " << logT[std::stod(SelectedlogT)] << std::endl;
+
 
 
 			// Add up all the distances to find the least distance!
