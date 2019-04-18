@@ -43,9 +43,10 @@ struct ROW {
 	double N_massFrac = 0.0;
 	double O_massFrac = 0.0;
 
+	std::vector<double> X_Z;
 	double total_metal_massFrac = 0.0;
 
-	std::vector<double> X_Z;
+	std::vector<double> X_Z_all;
 	//double X_C  = 0.0;
 	//double X_N  = 0.0;
 	//double X_O  = 0.0;
@@ -62,8 +63,8 @@ struct ROW {
 	//double X_Fe = 0.0;
 	//double X_Ni = 0.0;
 	
-	double opacity_value = 0.0;
-
+	double opac_xsec = 0.0;
+	double abs_coeff = 0.0;
 };
 
 struct DISVAL { 
@@ -91,6 +92,38 @@ private:
 	std::vector<double> He_massFrac_inOPfiles = {1.0000,0.9999,0.9997,0.9990,0.9980,0.9960,0.9900,0.9800,0.9700,0.9600,0.9400,0.9200,0.9000,0.9000,0.8999,0.8997,0.8990,0.8980,0.8960,0.8900,0.8800,0.8700,0.8600,0.8400,0.8200,0.8000,0.8000,0.7999,0.7997,0.7990,0.7980,0.7960,0.7900,0.7800,0.7700,0.7600,0.7400,0.7200,0.7000,0.6500,0.6499,0.6497,0.6490,0.6480,0.6460,0.6400,0.6300,0.6200,0.6100,0.5900,0.5700,0.5500,0.5000,0.4999,0.4997,0.4990,0.4980,0.4960,0.4900,0.4800,0.4700,0.4600,0.4400,0.4200,0.4000,0.3000,0.2999,0.2997,0.2990,0.2980,0.2960,0.2900,0.2800,0.2700,0.2600,0.2400,0.2200,0.2000,0.2000,0.1999,0.1997,0.1990,0.1980,0.1960,0.1900,0.1800,0.1700,0.1600,0.1400,0.1200,0.1000,0.1000,0.0999,0.0997,0.0990,0.0980,0.0960,0.0900,0.0800,0.0700,0.0600,0.0400,0.0200,0.0000,0.0500,0.0499,0.0497,0.0490,0.0480,0.0460,0.0400,0.0300,0.0200,0.0100,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000};
 	std::vector<double> logR = {-8.0,-7.5,-7.0,-6.5,-6.0,-5.5,-5.0,-4.5,-4.0,-3.5,-3.0,-2.5,-2.0,-1.5,-1.0,-0.5,0.0,0.5,1.0};
 	std::vector<double> logT = {3.75,3.80,3.85,3.90,3.95,4.00,4.05,4.10,4.15,4.20,4.25,4.30,4.35,4.40,4.45,4.50,4.55,4.60,4.65,4.70,4.75,4.80,4.85,4.90,4.95,5.00,5.05,5.10,5.15,5.20,5.25,5.30,5.35,5.40,5.45,5.50,5.55,5.60,5.65,5.70,5.75,5.80,5.85,5.90,5.95,6.00,6.10,6.20,6.30,6.40,6.50,6.60,6.70,6.80,6.90,7.00,7.10,7.20,7.30,7.40,7.50,7.60,7.70,7.80,7.90,8.00,8.10,8.30,8.50,8.70};
+	//Standard Atomic Weights 2017 from http://www.ciaaw.org/atomic-weights.htm (accessed on 12.03.2019)
+	//Where applicable, values have been truncated upto 4 decimal places.
+	std::vector<double> atomic_mass = {1.0078,4.0026,3.0160,//H, He4, He3
+					12.0000,13.0033, //C12, C13
+					14.0030,15.0001, //N14, N15
+					15.9949,16.9991,17.9991, //O16, O17, O18
+					20.1797,//Ne *
+					22.9897,//Na *
+					24.3055,//Mg **
+					26.9815,//Al *
+					28.085, //Si **
+					30.9737,//P *
+					32.0675,//S **
+					35.4515,//Cl **
+					39.8775,//Ar **
+					39.0983,//K *
+					40.078, //Ca *
+					44.9559,//Sc *
+					47.867, //Ti *
+					50.9415,//V *
+					51.9961,//Cr *
+					54.9380,//Mn *
+					55.845, //Fe *
+					58.9331,//Co *
+					58.6934 //Ni *
+	};	
+	// * standard atomic weight
+	// ** middle of range of standard atomic weight
+	const double amu = 1.6605e-24; //grams
+	const double alpha = 1/137;
+	const double m_e = 9.109e-28; //grams
+	const double g_ae = 10^-12;
 	
 	//opacity files downloaded on 28 Jan 2019
 	std::vector<std::string> OpacityFiles= {
@@ -230,7 +263,16 @@ public:
 	int GetTableIndex();
 	int AccessSolarModel();
 	//double AccessOpacityFile(std::string s, std::string H, std::string He, std::string R, std::string T); 
-	double AccessOpacityFile(int s, int HandHe, int R, int T); 
+	double AccessOpacityFile(int s, int HandHe,int R, int T); 
+	//double ElectronNumberDensity(double, double);
+	//double NumberDensity();
+	//double AbsorptionCoefficient();
+	//double ComptonEmissionRate();
+	//double BremssEmissionRate();
+	//double F();
+	//double Integrate();
+	//void DifferentialAxionFlux();
+
 };
 
 #endif // READFILE_H
