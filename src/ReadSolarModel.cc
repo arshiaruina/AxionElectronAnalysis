@@ -1,6 +1,9 @@
 //Code to read the opacity files and extract the required tables from them to be accessed later
 //Author: Arshia Ruina
 
+// to compile on mac, use g++ -std=c++11 <filename>
+// also include sstream and string libraries
+
 #include <iostream>
 #include <iomanip>
 #include <fstream>
@@ -141,7 +144,6 @@ int SolarModel::AccessSolarModel() {
 			std::vector<DISVAL> OpFileDistVec;
 			for(int j=0; j < OpacityFiles.size(); j++) { 
 				OpFileDistVec.push_back(DISVAL());
-				//OpFileDistVec.back().value = OpacityFiles[j];
 				OpFileDistVec.back().index = j;
 				double d = 0.0;
                  		for(int k=0; k < 15; k++) {
@@ -151,7 +153,6 @@ int SolarModel::AccessSolarModel() {
          		}
 			//std::sort(OpFileDistVec.begin(),OpFileDistVec.end(),SortDistances);
 			sort(OpFileDistVec.begin(),OpFileDistVec.end(),SortDistances);
-			//std::string SelectedOpacityFile = OpFileDistVec[0].value;			
 			int SelectedOpacityFile = OpFileDistVec[0].index;			
 
 			/*
@@ -167,19 +168,20 @@ int SolarModel::AccessSolarModel() {
 			//MatchedOpacityFile.push_back(std::string);
 			//MatchedOpacityFile.back() = OpFileDistVec[2].filename; 
 
-			std::cout << "[INFO] H mass fraction of this row: " << row[i].H_massFrac << std::endl;
-			std::cout << "[INFO] He mass fraction of this row: " << row[i].He_massFrac << std::endl;
-                        std::cout << "[INFO] Choosing the closest combination of H and He mass fractions... " << std::endl;
+                        std::cout << "[INFO] H mass fraction of this row: " << row[i].H_massFrac << std::endl;
+                        std::cout << "[INFO] He mass fraction of this row: " << row[i].He_massFrac << std::endl;
+                        std::cout << "[INFO] Choosing the closest H and He mass fractions... " << std::endl;
                         std::vector<DISVAL> HandHe_massFrac_distVec;
                         for(int j=0; j < 126; j++) { //H_massFrac_inOPfiles.size() = 126
-                        	double d_H = ComputeDistance(row[i].H_massFrac,H_massFrac_inOPfiles[j]);
-                        	double d_He = ComputeDistance(row[i].He_massFrac,He_massFrac_inOPfiles[j]);
-                        	HandHe_massFrac_distVec.push_back(DISVAL());
-                        	HandHe_massFrac_distVec.back().dist = std::sqrt(d_H*d_H + d_He*d_He);  
-                        	HandHe_massFrac_distVec.back().index = j;
-			}
-			std::sort(HandHe_massFrac_distVec.begin(),HandHe_massFrac_distVec.end(),SortDistances);
-                        //std::string SelectedHandHemassFrac = "";
+                                //double d = SquaredDistance(row[i].H_massFrac,H_massFrac_inOPfiles[j]);
+                                double d_H = ComputeDistance(row[i].H_massFrac,H_massFrac_inOPfiles[j]);
+                                double d_He = ComputeDistance(row[i].He_massFrac,He_massFrac_inOPfiles[j]);
+				HandHe_massFrac_distVec.push_back(DISVAL());
+                                //H_massFrac_distVec.back().dist = std::sqrt(d);        
+                                HandHe_massFrac_distVec.back().dist = std::sqrt(d_H*d_H + d_He*d_He);
+                                HandHe_massFrac_distVec.back().index = j;
+                        }
+                        std::sort(HandHe_massFrac_distVec.begin(),HandHe_massFrac_distVec.end(),SortDistances);
                         int SelectedHandHemassFrac = -1;
                         if(HandHe_massFrac_distVec.size() > 0){
                                 SelectedHandHemassFrac = HandHe_massFrac_distVec[0].index;
@@ -187,7 +189,7 @@ int SolarModel::AccessSolarModel() {
                         std::cout << "[INFO] H mass fraction found to be closest: " << H_massFrac_inOPfiles[SelectedHandHemassFrac] << std::endl;
                         std::cout << "[INFO] He mass fraction found to be closest: " << He_massFrac_inOPfiles[SelectedHandHemassFrac] << std::endl;
 
-
+			////--------------------------------------------------------------------------------//
                         //std::cout << "[INFO] H mass fraction of this row: " << row[i].H_massFrac << std::endl;
                         //std::cout << "[INFO] Choosing the closest H mass fraction... " << std::endl;
 			//std::vector<DISVAL> H_massFrac_distVec;
@@ -205,6 +207,7 @@ int SolarModel::AccessSolarModel() {
 			//}
                         //std::cout << "[INFO] H mass fraction found to be closest: " << SelectedHmassFrac << std::endl;
 
+			////--------------------------------------------------------------------------------//
                         //std::cout << "[INFO] He mass fraction of this row: " << row[i].He_massFrac << std::endl;
                         //std::cout << "[INFO] Choosing the closest He mass fraction... " << std::endl;
 			//std::vector<DISVAL> He_massFrac_distVec;
@@ -216,14 +219,15 @@ int SolarModel::AccessSolarModel() {
 			//	He_massFrac_distVec.back().value = std::to_string(He_massFrac_inOPfiles[j]);
 			//}
 			//std::sort(He_massFrac_distVec.begin(),He_massFrac_distVec.end(),SortDistances);
-			//std::string SelectedHemassFrac = "";
+			//std::string SelectedHemassFrac 	= "";
 			//if(He_massFrac_distVec.size() > 0) {
 			//	SelectedHemassFrac = He_massFrac_distVec[0].value;
 			//}
                         //std::cout << "[INFO] He mass fraction found to be closest: " << SelectedHemassFrac << std::endl;
 
+			//--------------------------------------------------------------------------------//
                         std::cout << "[INFO] Density value of this row: " << row[i].density << std::endl;
-			double var = std::log10( row[i].density / (row[i].temp * 1e-6) ); 
+			double var = std::log10( row[i].density / (row[i].temp * 1e-6) ); // density in the OP files is stored in this format  
                         std::cout << "[INFO] log R value of this row: " << var << std::endl;
                         std::cout << "[INFO] Choosing the closest log R value... " << std::endl;
 			std::vector<DISVAL> logR_distVec;
@@ -235,20 +239,16 @@ int SolarModel::AccessSolarModel() {
 				//logR_distVec.back().dist = std::sqrt(d);	
 				logR_distVec.back().dist = ComputeDistance(var,logR[j]);	
 				//logR_distVec.back().value = std::to_string(logR[j]);	
-				//logR_distVec.back().value = std::to_string(j);//index of the logR value	
-				logR_distVec.back().index = j;//index of the logR value		
+				logR_distVec.back().index = j;//index of the logR value	
 			}
 			std::sort(logR_distVec.begin(),logR_distVec.end(),SortDistances);
-			//std::string SelectedlogR = "";
 			int SelectedlogR = -1;
 			if(logR_distVec.size() > 0) {
-				//SelectedlogR = logR_distVec[0].value;
 				SelectedlogR = logR_distVec[0].index;
                         }
-			//std::cout << "[INFO] log R found to be closest: " << logR[std::stod(SelectedlogR)] << std::endl; // should have been  stoi anyway
 			std::cout << "[INFO] log R found to be closest: " << logR[SelectedlogR] << std::endl;
 
-
+			//--------------------------------------------------------------------------------//
                         std::cout << "[INFO] Temperature value of this row: " << row[i].temp << std::endl;
                         std::cout << "[INFO] log T value of this row: " << std::log10(row[i].temp) << std::endl;
                         std::cout << "[INFO] Choosing the closest log T value... " << std::endl;
@@ -259,17 +259,14 @@ int SolarModel::AccessSolarModel() {
 				//logT_distVec.back().dist = std::sqrt(d);	
 				logT_distVec.back().dist = ComputeDistance(std::log10(row[i].temp),logT[j]);
 				//logT_distVec.back().value = std::to_string(logT[j]);	
-				//logT_distVec.back().value = std::to_string(j);//index of the logT value	
 				logT_distVec.back().index = j;//index of the logT value	
 			}
 			std::sort(logT_distVec.begin(),logT_distVec.end(),SortDistances);
 			//std::string SelectedlogT = logT_distVec[0].value;
-			//std::string SelectedlogT = "";
 			int SelectedlogT = -1;
 			if(logT_distVec.size() > 0) {
 				SelectedlogT = logT_distVec[0].index;
                         }
-			//std::cout << "[INFO] log T found to be closest: " << logT[std::stod(SelectedlogT)] << std::endl; // should have been stoi anyway
 			std::cout << "[INFO] log T found to be closest: " << logT[SelectedlogT] << std::endl;
 
 
@@ -422,8 +419,7 @@ for that row.
 
 
 //double AccessOpacityFile(std::string s, std::string H, std::string He, std::string R, std::string T) {
-//double SolarModel::AccessOpacityFile(std::string s, std::string H, std::string He, std::string R, std::string T) {
-double SolarModel::AccessOpacityFile(int  s, int HandHe,  int R, int T) {
+double SolarModel::AccessOpacityFile(int s, int HandHe, int R, int T) {
 
         int lineNumber = 0;
 	int startTable_lineNumber = 0;                                 
@@ -432,22 +428,16 @@ double SolarModel::AccessOpacityFile(int  s, int HandHe,  int R, int T) {
 	std::string tableIndex;
 	std::string selected_tableIndex;
 	//std::vector<std::string> tableIndex;
+			
 
 	std::ifstream opacity_file;
-	//opacity_file.open(s.c_str());
 	opacity_file.open(OpacityFiles[s].c_str());
 
-	//std::cout << "[INFO] Accessing opacity file: " << s.c_str() << std::endl;
-	//std::cout << "[INFO] Looking for H mass fraction: " << H << std::endl;
-	//std::cout << "[INFO] Looking for He mass fraction: " << He << std::endl;
-	//std::cout << "[INFO] Looking for log R value: " << logR[std::stoi(R)] << std::endl;
-	//std::cout << "[INFO] Looking for log T value: " << logT[std::stoi(T)] << std::endl;
-
-        std::cout << "[INFO] Accessing opacity file: " << OpacityFiles[s].c_str() << std::endl;
-        std::cout << "[INFO] Looking for H mass fraction: " << H_massFrac_inOPfiles[HandHe] << std::endl;
-        std::cout << "[INFO] Looking for He mass fraction: " << He_massFrac_inOPfiles[HandHe] << std::endl;
-        std::cout << "[INFO] Looking for log R value: " << logR[R] << std::endl;
-        std::cout << "[INFO] Looking for log T value: " << logT[T] << std::endl;
+	std::cout << "[INFO] Accessing opacity file: " << OpacityFiles[s].c_str() << std::endl;
+	std::cout << "[INFO] Looking for H mass fraction: " << H_massFrac_inOPfiles[HandHe] << std::endl;
+	std::cout << "[INFO] Looking for He mass fraction: " << He_massFrac_inOPfiles[HandHe] << std::endl;
+	std::cout << "[INFO] Looking for log R value: " << logR[R] << std::endl;
+	std::cout << "[INFO] Looking for log T value: " << logT[T] << std::endl;
 
 	if(!opacity_file.good()){
 		std::cout << "Problem with file!" << std::endl;
@@ -460,8 +450,8 @@ double SolarModel::AccessOpacityFile(int  s, int HandHe,  int R, int T) {
                 std::istringstream iss_op_line(op_line);
 
 		++lineNumber;	
-
-		////std::cout << "[INFO] Finding table index by comparing the H and He mass fractions..." << std::endl;
+		
+		//std::cout << "[INFO] Finding table index by comparing the H and He mass fractions..." << std::endl;
 		//if(lineNumber > 63 && lineNumber < 189){
 
 		//	posX = op_line.find("X");
@@ -474,7 +464,7 @@ double SolarModel::AccessOpacityFile(int  s, int HandHe,  int R, int T) {
 		//	//if(std::stod(_H_massFrac) == row[i].H_massFrac && std::stod(_He_massFrac) == row[i].He_massFrac){
 		//	//if(std::stod(_H_massFrac) == H.c_str() && std::stod(_He_massFrac) == He.c_str()){
 		//	//if(_H_massFrac == H.c_str() && _He_massFrac == He.c_str()){
-		//	if(std::stod(_H_massFrac) == std::stod(H) && std::stod(_He_massFrac) == std::stod(He)){
+		//	if(std::stod(_H_massFrac) == H_massFrac_inOPfiles[HandHe] && std::stod(_He_massFrac) == He_massFrac_inOPfiles[HandHe]){
         	//		selected_tableIndex = op_line.substr(8,3);
 		//		//tableIndex.push_back(line.substr(8,3));
         	//		//select[i].tableIndex = tableIndex;
@@ -482,13 +472,12 @@ double SolarModel::AccessOpacityFile(int  s, int HandHe,  int R, int T) {
         	//		//std::cout << "[DEBUG] Selected mass fraction of He: " << select[i].He_massFrac << std::endl;
        		//		std::cout << "[INFO] Selected table: " << selected_tableIndex << std::endl;
        		//		//std::cout << "[DEBUG] Aur kuch? " << std::endl;
-       		//	}	
-       		//	//std::cout << "[DEBUG] nAHI, BATA NA, Aur kuch? " << lineNumber << std::endl;
-		//	
+       		//	}		
 		//}
-	
+		//--------------------------------------------------------------//
 		// above lines replaced by -->
-		selected_tableIndex = std::to_string(HandHe+1);
+		//selected_tableIndex = std::to_string(HandHe+1); //--> not working!
+		//--------------------------------------------------------------//
 	
 		//std::cout << "Selected table number: " << selected_tableIndex << std::endl; 
 		//std::cout << "Locating the selected table in the opacity file..." << selected_tableIndex << std::endl; 
@@ -503,8 +492,9 @@ double SolarModel::AccessOpacityFile(int  s, int HandHe,  int R, int T) {
                         if (posTableIndex!=std::string::npos){ // 1. if at the first line of a table
                         	//std::cout << "DEBUG: at first line of a table " << line << std::endl;
                                 tableIndex = op_line.substr(posTableIndex+7,3);
-                                if(tableIndex == selected_tableIndex){ // 1.a) if at the start of a table we want to access
-                                	std::cout << "DEBUG: at first line of a table we want to access" << std::endl;
+                                //if(tableIndex == selected_tableIndex){ // 1.a) if at the start of a table we want to access
+                                if(std::stoi(tableIndex) == HandHe+1){ // 1.a) if at the start of a table we want to access
+                                	//std::cout << "DEBUG: at first line of a table we want to access" << std::endl;
                                         //std::cout << "DEBUG: " << line << std::endl;
                                         //s << line << std::endl;
                                         //select[i].lineNumber = lineNumber; // storing the location of start of that table
@@ -532,7 +522,7 @@ double SolarModel::AccessOpacityFile(int  s, int HandHe,  int R, int T) {
                         	//if(lineNumber > startTable_lineNumber+5 ) {std::cout << "[DEBUG 9] line number: " << lineNumber << " and lineNumber > startTable_lineNumber+5" << std::endl;}
                         	//if(lineNumber < startTable_lineNumber+76 ) {std::cout << "[DEBUG 10] lineNumber: " << lineNumber << " and lineNumber < startTable_lineNumber+76" << std::endl;}
                         	if(lineNumber > startTable_lineNumber+5 && lineNumber < startTable_lineNumber+76 ) { // 2.a) if inside a table we want to access
-                                	std::cout << "[INFO] Inside a table we want to access" << std::endl;
+                                	//std::cout << "[INFO] Inside a table we want to access" << std::endl;
                                         //s << line << std::endl;
                                         //std::cout << "DEBUG: " << line << std::endl;
 					//std::cout << " [INFO] lineNumber: " << lineNumber << std::endl;
@@ -548,9 +538,7 @@ double SolarModel::AccessOpacityFile(int  s, int HandHe,  int R, int T) {
 					//std::cout << " [DEBUG 13]" << std::endl;
 					//if(row_in_OPtable[0] == logT[std::stoi(T)])
 					//std::cout << "[DEBUG 14] OPtable_temp: " << OPtable_temp << std::endl;
-					//if(std::stod(OPtable_temp) == logT[std::stoi(T)]) {
 					if(std::stod(OPtable_temp) == logT[T]) {
-						//opacity_xsec = row_in_OPtable[std::stoi(R)+1];
 						opacity_xsec = row_in_OPtable[R+1];
 						std::cout << "[INFO] Found the best opacity xsec value for this row: " << opacity_xsec << std::endl;
 						return std::stod(opacity_xsec);
@@ -563,6 +551,7 @@ double SolarModel::AccessOpacityFile(int  s, int HandHe,  int R, int T) {
 		}
 	}
 }
+
 
 
 
@@ -646,3 +635,4 @@ int ReadOpacityFile::ReadAndStoreTable() {
 	opacity_file.close();
 }       
 */
+

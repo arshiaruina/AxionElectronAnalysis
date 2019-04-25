@@ -67,7 +67,6 @@ struct ROW {
 };
 
 struct DISVAL { 
-	//std::string value;
 	int index;
 	double dist;
 };
@@ -229,8 +228,8 @@ public:
 	void ReadOpacityFileName();
 	int GetTableIndex();
 	int AccessSolarModel();
-	//double AccessOpacityFile(std::string s, std::string H, std::string He, std::string R, std::string T); 
 	double AccessOpacityFile(int s, int HandHe, int R, int T); 
 };
 
 #endif // READFILE_H
+
