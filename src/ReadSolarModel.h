@@ -63,7 +63,10 @@ struct ROW {
 	//double X_Ni = 0.0;
 	
 	double opacity_value = 0.0;
-
+	std::vector<double> n_Z;
+	double abs_coeff = 0.0;
+	double electron_density = 0.0;
+ 
 };
 
 struct DISVAL { 
@@ -91,6 +94,39 @@ private:
 	std::vector<double> logR = {-8.0,-7.5,-7.0,-6.5,-6.0,-5.5,-5.0,-4.5,-4.0,-3.5,-3.0,-2.5,-2.0,-1.5,-1.0,-0.5,0.0,0.5,1.0};
 	std::vector<double> logT = {3.75,3.80,3.85,3.90,3.95,4.00,4.05,4.10,4.15,4.20,4.25,4.30,4.35,4.40,4.45,4.50,4.55,4.60,4.65,4.70,4.75,4.80,4.85,4.90,4.95,5.00,5.05,5.10,5.15,5.20,5.25,5.30,5.35,5.40,5.45,5.50,5.55,5.60,5.65,5.70,5.75,5.80,5.85,5.90,5.95,6.00,6.10,6.20,6.30,6.40,6.50,6.60,6.70,6.80,6.90,7.00,7.10,7.20,7.30,7.40,7.50,7.60,7.70,7.80,7.90,8.00,8.10,8.30,8.50,8.70};
 	
+	//Standard Atomic Weights 2017 from http://www.ciaaw.org/atomic-weights.htm (accessed on 12.03.2019)
+	//Where applicable, values have been truncated upto 4 decimal places.
+	std::vector<double> atomic_mass = {1.0078,4.0026,3.0160,//H, He4, He3
+					12.0000,13.0033, //C12, C13
+					14.0030,15.0001, //N14, N15
+					15.9949,16.9991,17.9991, //O16, O17, O18
+					20.1797,//Ne *
+					22.9897,//Na *
+					24.3055,//Mg **
+					26.9815,//Al *
+					28.085, //Si **
+					30.9737,//P *
+					32.0675,//S **
+					35.4515,//Cl **
+					39.8775,//Ar **
+					39.0983,//K *
+					40.078, //Ca *
+					44.9559,//Sc *
+					47.867, //Ti *
+					50.9415,//V *
+					51.9961,//Cr *
+					54.9380,//Mn *
+					55.845, //Fe *
+					58.9331,//Co *
+					58.6934 //Ni *
+	};	
+	// * standard atomic weight
+	// ** middle of range of standard atomic weight
+	const double amu = 1.6605e-24; //grams
+	const double alpha = 1/137;
+	const double m_e = 9.109e-28; //grams
+	const double g_ae = 10^-12;
+
 	//opacity files downloaded on 28 Jan 2019
 	std::vector<std::string> OpacityFiles= {
 		"../resources/opacity_tables/OP17.0.0-0.0-0.560994-0.376801-0.021178-0.03366-0.005376-0.001992-0.0-0.0-0.0-0.0-0.0-0.0-0.0.stored",
@@ -228,7 +264,10 @@ public:
 	void ReadOpacityFileName();
 	int GetTableIndex();
 	int AccessSolarModel();
-	double AccessOpacityFile(int s, int HandHe, int R, int T); 
+	double AccessOpacityFile(int, int, int, int); 
+	double ElectronNumberDensity(double, double);
+	double ElementNumberDensity(double,double,double);
+	double AbsorptionCoefficient(double, double,double,double,double);
 };
 
 #endif // READFILE_H

@@ -227,7 +227,7 @@ int SolarModel::AccessSolarModel() {
 
 			//--------------------------------------------------------------------------------//
                         std::cout << "[INFO] Density value of this row: " << row[i].density << std::endl;
-			double var = std::log10( row[i].density / (row[i].temp * 1e-6) ); // density in the OP files is stored in this format  
+			double var = std::log10( row[i].density / pow(row[i].temp * 1e-6,3) ); // density in the OP files is stored in this format  
                         std::cout << "[INFO] log R value of this row: " << var << std::endl;
                         std::cout << "[INFO] Choosing the closest log R value... " << std::endl;
 			std::vector<DISVAL> logR_distVec;
@@ -282,8 +282,11 @@ int SolarModel::AccessSolarModel() {
 			
                         std::cout << "[INFO] Calling the function to access the chosen opacity file and obtain the opacity value for the chosen H and He mass fractions, log R and log T values..." << std::endl;
 			row[i].opacity_value = AccessOpacityFile(SelectedOpacityFile, SelectedHandHemassFrac, SelectedlogR, SelectedlogT);
-	
-			std::cout << "Opacity xsec stored for this row: " << row[i].opacity_value << std::endl;
+			std::cout << "Opacity xsec stored for this row: " << row[i].opacity_value << std::endl; 
+			
+                        std::cout << "[INFO] Calling the function to compute the electron number density..." << std::endl;
+			row[i].electron_density = ElectronNumberDensity(row[i].density, row[i].H_massFrac);
+			std::cout << "Electron number density stored for this row: " << row[i].electron_density << std::endl;
 
 			std::cout << std::endl;	
                         ++i;
@@ -418,11 +421,18 @@ for that row.
 }*/
 
 
+/*---------------------------------------------------------------------------------------
+This function takes as arguments the indices of the selected opacity file, H and He mass 
+fractions (thereby the table index inside an opacity file), the R value and the T value 
+to access the opacity file, the table inside it and the position inside the table so that 
+it can return the value of the Rosseland mean cross-section for each row in the solar model.
+---------------------------------------------------------------------------------------*/
+
 //double AccessOpacityFile(std::string s, std::string H, std::string He, std::string R, std::string T) {
 double SolarModel::AccessOpacityFile(int s, int HandHe, int R, int T) {
 
         int lineNumber = 0;
-	int startTable_lineNumber = 0;                                 
+	int startTable_lineNumber = 0;                                
         int posX = 0;
         int posY = 0;
 	std::string tableIndex;
@@ -476,7 +486,7 @@ double SolarModel::AccessOpacityFile(int s, int HandHe, int R, int T) {
 		//}
 		//--------------------------------------------------------------//
 		// above lines replaced by -->
-		//selected_tableIndex = std::to_string(HandHe+1); //--> not working!
+		//selected_tableIndex = std::to_string(HandHe+1); //--> not required, just use HandHe+1 in the if-statement for selection
 		//--------------------------------------------------------------//
 	
 		//std::cout << "Selected table number: " << selected_tableIndex << std::endl; 
@@ -553,86 +563,49 @@ double SolarModel::AccessOpacityFile(int s, int HandHe, int R, int T) {
 }
 
 
+/*TODO: 
+Write separate functions to compute the following -->
+1. number density of an element (from a given mass fraction)
+2. number density of electrons
+3. absorption coefficient
+4. Compton emission rate
+5. Bremsstrahlung emission rate
+6. F(w,y)
+7. a general integral function
+8. differential flux (as a function of energy and radial position inside the sun)
 
-
-/*
-int ReadOpacityFile::ReadAndStoreTable() {
-
-        for(int i = 0; i < input; i++){
-
-        	int lineNumber = 0;
-        	int posTableIndex = 0;
-
-        	in_file.open(in_filename.c_str());
-	
-	        if(!in_file.good()){
-	                std::cout << "Problem with file!" << std::endl;
-	                return 1;
-	        }
-
-                std::stringstream s;
-                std::ofstream out_file;
-                std::string out_filename = "../resources/extracted_tables/" + select[i].H_massFrac + "-" + select[i].He_massFrac + "-" + in_filename.substr(32,60) + ".stored";
-                out_file.open(out_filename);
-
-                while(!in_file.eof()){
-                        std::getline(in_file, line);
-                        ++lineNumber;
-                        if(lineNumber > 240 ){
-
-                                std::string tableIndex;
-                                std::size_t posTableIndex = line.find("TABLE");
-
-                                if (posTableIndex!=std::string::npos){ // 1. if at the first line of a table
-					//std::cout << "DEBUG: at first line of a table " << line << std::endl;
-				        tableIndex = line.substr(posTableIndex+7,3);
-                                        if(tableIndex == select[i].tableIndex){	// 1.a) if at the start of a table we want to access
-                                                //std::cout << "DEBUG: at first line of a table we want to access" << std::endl;
-						//std::cout << "DEBUG: " << line << std::endl;
-						s << line << std::endl;
-                                                select[i].lineNumber = lineNumber; // storing the location of start of that table
-                                                std::cout << "Table number " << tableIndex << " starts on line " << lineNumber << std::endl;
-                                                //foundTable = true;
-                                        }
-					else { // 1.b) if at the start of a table we don't want to access
-						//std::cout << "DEBUG: at the start of a table we don't want to access" << std::endl;
-						continue;
-                                	}
-				}
-                                else { // 2. if inside a table
-					//std::cout << "DEBUG: inside a table" << std::endl;
-					if(lineNumber < select[i].lineNumber+76) { // 2.a) if inside a table we want to access
-                                		//std::cout << "DEBUG: inside a table we want to access" << std::endl;
-						s << line << std::endl;
-						//std::cout << "DEBUG: " << line << std::endl;
-                                	}
-					else { // 2.b) if inside a table we don't want to access
-						//std::cout << "DEBUG: inside a table we don't want to access" << std::endl;
-					}
-				}
-                        }
-                } 
-                std::cout << "Finished parsing table" << std::endl;
-                std::cout << "Storing the parsed table " << select[i].tableIndex << " in ouput file " << out_filename << std::endl;
-                out_file << s.str() << std::endl;
-                out_file.close();
-                std::cout << "Output file closed" << std::endl;
-                in_file.close();
-                std::cout << "Input file closed" << std::endl;
-        }
-
-        std::cout << "Done!" << std::endl;
-
-
-
-
-
-	
-		++lineNumber;
-
-
-	}
-	opacity_file.close();
-}       
+Maybe later separate this whole part into a separate file.
 */
+
+/*-----------------------------------------------------------------------------------
+Number density of electrons is computed using the following assumptions:
+1. H_massFrac + He_massFrac ~ 1
+2. Totally ionised ions
+TODO later: Check the validity of these assumptions
+------------------------------------------------------------------------------------*/ 
+double SolarModel::ElectronNumberDensity(double zone_density, double H_massFrac){
+
+	return((zone_density/amu)*(1+H_massFrac)/2);
+}
+
+/*-----------------------------------------------------------------------------------
+This function computes the density of atoms with atomic number Z (n_Z).
+------------------------------------------------------------------------------------*/ 
+double SolarModel::ElementNumberDensity(double Z_massFrac, double zone_density, double Z_atomicMass) { // called iteratively for each element in AbsorptionCoefficient()
+
+	return ((Z_massFrac * zone_density) / (Z_atomicMass * amu));
+}
+
+/*-----------------------------------------------------------------------------------
+This function computes the absorption coefficients (k) in a sum over all nuclei.
+-----------------------------------------------------------------------------------*/ 
+double SolarModel::AbsorptionCoefficient(double E, double T, double Rho, double XZ, double op_xsec){
+	//double k = 0.0;
+	//for(int j=0: j<28; j++){
+	//	//k += op_xsec * (1 - exp(E/T)) * NumberDensity(X_Z_all[j],std::stod(row[i].density),atomic_mass[j]);
+	//	k += op_xsec * (1 - exp(E/T)) * NumberDensity(X_Z_all[j],Rho,atomic_mass[j]);
+	//}  
+	//return(k);
+}
+
 
