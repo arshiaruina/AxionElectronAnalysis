@@ -38,8 +38,8 @@ bool SortDistances(DISVAL& v1, DISVAL& v2){
 
 /*--------------------------------------------------------------------------------------------------------
 This function reads and stores the contents of the Solar Model in a vector called row
-and simultaneously computes and stores the metal mass fractions for each row in another vector called X_Z.
-The elements of X_Z will be compared to the opacity filenames to find the closest matching metal composition
+and simultaneously computes and stores the metal mass fractions for each row in another vector called X_Z_metal.
+The elements of X_Z_metal will be compared to the opacity filenames to find the closest matching metal composition
 for a particular row and later access that opacity table.
 ----------------------------------------------------------------------------------------------------------*/
 int SolarModel::AccessSolarModel() {
@@ -68,7 +68,7 @@ int SolarModel::AccessSolarModel() {
         std::cout << "[INFO] Reading solar model file... " << std::endl;
 	//++lineNumber;
 
-        while(!solarmodel_file.eof() /*&& lineNumber < 50*/) {
+        while(!solarmodel_file.eof() && lineNumber < 50) {
 		std::getline(solarmodel_file, line);
                 std::istringstream iss_line(line);
                 if(line.find("#")==0 || line.empty()) {
@@ -78,14 +78,21 @@ int SolarModel::AccessSolarModel() {
                 else {
                         std::cout << "[INFO] Reading line " << lineNumber << std::endl;
 			row.push_back(ROW());
+			//TODO--> Make this efficient!
 			iss_line >> row[i].massFrac >> row[i].radius >> row[i].temp >> row[i].density >> row[i].pressure >> row[i].lumiFrac >> row[i].H_massFrac >> row[i].He4_massFrac >> row[i].He3_massFrac >> row[i].C12_massFrac >> row[i].C13_massFrac >> row[i].N14_massFrac >> row[i].N15_massFrac >> row[i].O16_massFrac >> row[i].O17_massFrac >> row[i].O18_massFrac >> row[i].Ne_massFrac >> row[i].Na_massFrac >> row[i].Mg_massFrac >> row[i].Al_massFrac >> row[i].Si_massFrac >> row[i].P_massFrac >> row[i].S_massFrac >> row[i].Cl_massFrac >> row[i].Ar_massFrac >> row[i].K_massFrac >> row[i].Ca_massFrac >> row[i].Sc_massFrac >> row[i].Ti_massFrac >> row[i].V_massFrac >> row[i].Cr_massFrac >> row[i].Mn_massFrac >> row[i].Fe_massFrac >> row[i].Co_massFrac >> row[i].Ni_massFrac;
-	
-                        std::cout << "[INFO] Computing and storing isotope mass fractions..." << std::endl;
-			row[i].He_massFrac = row[i].He4_massFrac + row[i].He3_massFrac;
-			row[i].C_massFrac = row[i].C12_massFrac + row[i].C13_massFrac;
-			row[i].N_massFrac = row[i].N14_massFrac + row[i].N15_massFrac;
-			row[i].O_massFrac = row[i].O16_massFrac + row[i].O17_massFrac + row[i].O18_massFrac;
-                        //std::cout << "[DEBUG] line: " << line << std::endl;
+			
+			/*------------------------------------------------------------------------------------------------------------------
+			   The isotopes don't need to be summed up in order to make the comparison with the OP filenames and select an OP file
+			   because from the atomic weights mentioned in the OP tables, one can infer that they use the most abundant isotope.
+			   That is why the lines below are commented out now and will be removed in future versions.
+			------------------------------------------------------------------------------------------------------------------*/
+                        //std::cout << "[INFO] Computing and storing isotope mass fractions..." << std::endl;
+			//row[i].He_massFrac = row[i].He4_massFrac + row[i].He3_massFrac;
+			//row[i].C_massFrac = row[i].C12_massFrac + row[i].C13_massFrac;
+			//row[i].N_massFrac = row[i].N14_massFrac + row[i].N15_massFrac;
+			//row[i].O_massFrac = row[i].O16_massFrac + row[i].O17_massFrac + row[i].O18_massFrac;
+                        
+			//std::cout << "[DEBUG] line: " << line << std::endl;
                         //std::cout << "[DEBUG] (iss_line) row contents: " << row[i].massFrac << " " <<  row[i].radius << " " <<  row[i].temp << " " <<  row[i].density << " " <<  row[i].pressure << " " <<  row[i].lumiFrac << " " <<  row[i].H_massFrac << " " <<  row[i].He_massFrac << " " <<  row[i].C12_massFrac << " " <<  row[i].C13_massFrac << " " <<  row[i].N14_massFrac << " " <<  row[i].N15_massFrac << " " <<  row[i].O16_massFrac << " " <<  row[i].O17_massFrac << " " <<  row[i].O18_massFrac << " " <<  row[i].Ne_massFrac << " " <<  row[i].Na_massFrac << " " <<  row[i].Mg_massFrac << " " <<  row[i].Al_massFrac << " " <<  row[i].Si_massFrac << " " <<  row[i].S_massFrac << " " <<  row[i].Ar_massFrac << " " <<  row[i].Ca_massFrac << " " <<  row[i].Cr_massFrac << " " <<  row[i].Mn_massFrac << " " <<  row[i].Fe_massFrac << " " <<  row[i].Ni_massFrac;
         
                         std::cout << "[INFO] Computing and storing total metal fraction and the required metal mass fractions (which will be later used to choose the opacity file)..." << std::endl;
@@ -112,41 +119,24 @@ int SolarModel::AccessSolarModel() {
 		
 			row[i].total_metal_massFrac = metal_massFrac;
 			for(int j=0;j<15;j++)
-				row[i].X_Z.push_back(0.0);
-			row[i].X_Z[0] = row[i].C_massFrac  / row[i].total_metal_massFrac;	//row[i].X_C  
-			row[i].X_Z[1] = row[i].N_massFrac  / row[i].total_metal_massFrac;	//row[i].X_N  
-			row[i].X_Z[2] = row[i].O_massFrac  / row[i].total_metal_massFrac;	//row[i].X_O  
-			row[i].X_Z[3] = row[i].Ne_massFrac / row[i].total_metal_massFrac;	//row[i].X_Ne 
-			row[i].X_Z[4] = row[i].Na_massFrac / row[i].total_metal_massFrac;	//row[i].X_Na 
-			row[i].X_Z[5] = row[i].Mg_massFrac / row[i].total_metal_massFrac;	//row[i].X_Mg 
-			row[i].X_Z[6] = row[i].Al_massFrac / row[i].total_metal_massFrac;	//row[i].X_Al 
-			row[i].X_Z[7] = row[i].Si_massFrac / row[i].total_metal_massFrac;	//row[i].X_Si 
-			row[i].X_Z[8] = row[i].S_massFrac  / row[i].total_metal_massFrac;	//row[i].X_S  
-			row[i].X_Z[9] = row[i].Ar_massFrac / row[i].total_metal_massFrac;	//row[i].X_Ar 
-			row[i].X_Z[10] = row[i].Ca_massFrac / row[i].total_metal_massFrac;	//row[i].X_Ca 
-			row[i].X_Z[11] = row[i].Cr_massFrac / row[i].total_metal_massFrac;	//row[i].X_Cr 
-			row[i].X_Z[12] = row[i].Mn_massFrac / row[i].total_metal_massFrac;	//row[i].X_Mn 
-			row[i].X_Z[13] = row[i].Fe_massFrac / row[i].total_metal_massFrac;	//row[i].X_Fe 
-			row[i].X_Z[14] = row[i].Ni_massFrac / row[i].total_metal_massFrac;	//row[i].X_Ni 
-			
-			//std::cout << "Row number " << i << std::endl;	
-			//std::cout << row[i].X_C  << std::endl;  
-	                //std::cout << row[i].X_N  << std::endl;
-	                //std::cout << row[i].X_O  << std::endl;
-	                //std::cout << row[i].X_Ne << std::endl;
-	                //std::cout << row[i].X_Na << std::endl;
-	                //std::cout << row[i].X_Mg << std::endl;
-	                //std::cout << row[i].X_Al << std::endl;
-	                //std::cout << row[i].X_Si << std::endl;
-	                //std::cout << row[i].X_S  << std::endl;
-	                //std::cout << row[i].X_Ar << std::endl;
-	                //std::cout << row[i].X_Ca << std::endl;
-	                //std::cout << row[i].X_Cr << std::endl;
-	                //std::cout << row[i].X_Mn << std::endl;
-	                //std::cout << row[i].X_Fe << std::endl;
-	                //std::cout << row[i].X_Ni << std::endl;
-			//std::cout << std::endl;
-					
+				row[i].X_Z_metal.push_back(0.0);
+			//TODO--> Make this efficient!
+			row[i].X_Z_metal[0] = row[i].C_massFrac  / row[i].total_metal_massFrac;	//row[i].X_C  
+			row[i].X_Z_metal[1] = row[i].N_massFrac  / row[i].total_metal_massFrac;	//row[i].X_N  
+			row[i].X_Z_metal[2] = row[i].O_massFrac  / row[i].total_metal_massFrac;	//row[i].X_O  
+			row[i].X_Z_metal[3] = row[i].Ne_massFrac / row[i].total_metal_massFrac;	//row[i].X_Ne 
+			row[i].X_Z_metal[4] = row[i].Na_massFrac / row[i].total_metal_massFrac;	//row[i].X_Na 
+			row[i].X_Z_metal[5] = row[i].Mg_massFrac / row[i].total_metal_massFrac;	//row[i].X_Mg 
+			row[i].X_Z_metal[6] = row[i].Al_massFrac / row[i].total_metal_massFrac;	//row[i].X_Al 
+			row[i].X_Z_metal[7] = row[i].Si_massFrac / row[i].total_metal_massFrac;	//row[i].X_Si 
+			row[i].X_Z_metal[8] = row[i].S_massFrac  / row[i].total_metal_massFrac;	//row[i].X_S  
+			row[i].X_Z_metal[9] = row[i].Ar_massFrac / row[i].total_metal_massFrac;	//row[i].X_Ar 
+			row[i].X_Z_metal[10] = row[i].Ca_massFrac / row[i].total_metal_massFrac;	//row[i].X_Ca 
+			row[i].X_Z_metal[11] = row[i].Cr_massFrac / row[i].total_metal_massFrac;	//row[i].X_Cr 
+			row[i].X_Z_metal[12] = row[i].Mn_massFrac / row[i].total_metal_massFrac;	//row[i].X_Mn 
+			row[i].X_Z_metal[13] = row[i].Fe_massFrac / row[i].total_metal_massFrac;	//row[i].X_Fe 
+			row[i].X_Z_metal[14] = row[i].Ni_massFrac / row[i].total_metal_massFrac;	//row[i].X_Ni 
+	
                         std::cout << "[INFO] Choosing the closest opacity file... " << std::endl;
 			std::vector<DISVAL> OpFileDistVec;
 			for(int j=0; j < OpacityFiles.size(); j++) { 
@@ -154,7 +144,7 @@ int SolarModel::AccessSolarModel() {
 				OpFileDistVec.back().index = j;
 				double d = 0.0;
                  		for(int k=0; k < 15; k++) {
-                         		d += SquaredDistance(row[i].X_Z[k],std::stod(XZ_VecForOpFile[j][k]));
+                         		d += SquaredDistance(row[i].X_Z_metal[k],std::stod(XZ_VecForOpFile[j][k]));
                  		}	 
 				OpFileDistVec.back().dist = std::sqrt(d);
          		}
@@ -291,11 +281,49 @@ int SolarModel::AccessSolarModel() {
 			row[i].opacity_value = AccessOpacityFile(SelectedOpacityFile, SelectedHandHemassFrac, SelectedlogR, SelectedlogT);
 			std::cout << "Opacity xsec stored for this row: " << row[i].opacity_value << std::endl; 
 			
-			//TODO--> Calculate the n_Z
+			std::cout << "Number densities n_Z being computed..." << std::endl;
+			for(int j=0; j<29; j++)
+				row[i].n_Z.push_back(0.0);
+			//row[i].n_Z[0] = (row[i].H_massFrac / atomic_mass[0]) * (row[i].density / amu);  
+			std::cout << row[i].H_massFrac << std::endl;
+			std::cout << atomic_mass[0] << std::endl;
+			std::cout << row[i].density << std::endl;
+			std::cout << amu << std::endl;  
+			std::cout << "[DEBUG] " << row[i].n_Z[0] << std::endl;
+			//TODO--> Make this efficient!
+			row[i].n_Z[1] = (row[i].He4_massFrac / atomic_mass[1]) * (row[i].density / amu); 
+			row[i].n_Z[2] = (row[i].He3_massFrac / atomic_mass[2]) * (row[i].density / amu);
+			row[i].n_Z[3] = (row[i].C12_massFrac / atomic_mass[3]) * (row[i].density / amu);
+			row[i].n_Z[4] = (row[i].C13_massFrac / atomic_mass[4]) * (row[i].density / amu);
+			row[i].n_Z[5] = (row[i].N14_massFrac / atomic_mass[5]) * (row[i].density / amu);
+			row[i].n_Z[6] = (row[i].N15_massFrac / atomic_mass[6]) * (row[i].density / amu);
+			row[i].n_Z[7] = (row[i].O16_massFrac / atomic_mass[7]) * (row[i].density / amu);
+			row[i].n_Z[8] = (row[i].O17_massFrac / atomic_mass[8]) * (row[i].density / amu);
+			row[i].n_Z[9] = (row[i].O18_massFrac / atomic_mass[9]) * (row[i].density / amu);
+			row[i].n_Z[10] = (row[i].Ne_massFrac / atomic_mass[10]) * (row[i].density / amu);
+			row[i].n_Z[11] = (row[i].Na_massFrac / atomic_mass[11]) * (row[i].density / amu);
+			row[i].n_Z[12] = (row[i].Mg_massFrac / atomic_mass[12]) * (row[i].density / amu);
+			row[i].n_Z[13] = (row[i].Al_massFrac / atomic_mass[13]) * (row[i].density / amu);
+			row[i].n_Z[14] = (row[i].Si_massFrac / atomic_mass[14]) * (row[i].density / amu);
+			row[i].n_Z[15] = (row[i].P_massFrac / atomic_mass[15]) * (row[i].density / amu);
+			row[i].n_Z[16] = (row[i].S_massFrac / atomic_mass[16]) * (row[i].density / amu);
+			row[i].n_Z[17] = (row[i].Cl_massFrac / atomic_mass[17]) * (row[i].density / amu);
+			row[i].n_Z[18] = (row[i].Ar_massFrac / atomic_mass[18]) * (row[i].density / amu);
+			row[i].n_Z[19] = (row[i].K_massFrac / atomic_mass[19]) * (row[i].density / amu);
+			row[i].n_Z[20] = (row[i].Ca_massFrac / atomic_mass[20]) * (row[i].density / amu);
+			row[i].n_Z[21] = (row[i].Sc_massFrac / atomic_mass[21]) * (row[i].density / amu);
+			row[i].n_Z[22] = (row[i].Ti_massFrac / atomic_mass[22]) * (row[i].density / amu);
+			row[i].n_Z[23] = (row[i].V_massFrac / atomic_mass[23]) * (row[i].density / amu);
+			row[i].n_Z[24] = (row[i].Cr_massFrac / atomic_mass[24]) * (row[i].density / amu);
+			row[i].n_Z[25] = (row[i].Mn_massFrac / atomic_mass[25]) * (row[i].density / amu);
+			row[i].n_Z[26] = (row[i].Fe_massFrac / atomic_mass[26]) * (row[i].density / amu);
+			row[i].n_Z[27] = (row[i].Co_massFrac / atomic_mass[27]) * (row[i].density / amu);
+			row[i].n_Z[28] = (row[i].Ni_massFrac / atomic_mass[28]) * (row[i].density / amu);
 
-                        //std::cout << "[INFO] Calling the function to compute the absorption coefficient..." << std::endl;
-			//row[i].abs_coeff = AbsorptionCoefficient(row[i].n_Z, row[i].opacity_value, row[i].temp);
-			//std::cout << "Absorption coefficient for this row: " << row[i].abs_coeff << std::endl;
+			double energy = 0.1;
+                        std::cout << "[INFO] Calling the function to compute the absorption coefficient..." << std::endl;
+			row[i].abs_coeff = AbsorptionCoefficient(row[i].n_Z, energy, row[i].temp, row[i].opacity_value);
+			std::cout << "Absorption coefficient for this row: " << row[i].abs_coeff << std::endl;
                         
 			std::cout << "[INFO] Calling the function to compute the electron number density..." << std::endl;
 			row[i].electron_density = ElectronNumberDensity(row[i].density, row[i].H_massFrac);
@@ -327,13 +355,13 @@ void SolarModel::ReadOpacityFileName(){
 		sthttp://www.cplusplus.com/forum/beginner/68340/d::string name = OpacityFiles[i];	
 
 		//XZ_VecForOpFile.push_back(std::vector<std::string>);
-		std::vector<std::string> X_Z;
-		XZ_VecForOpFile.push_back(X_Z);
+		std::vector<std::string> X_Z_metal;
+		XZ_VecForOpFile.push_back(X_Z_metal);
 		
 		//std::cout << "DEBUG 1" << std::endl;
 
-		std::vector<double> X_Z_numeric;
-		XZ_VecForOpFile_numeric.push_back(X_Z_numeric); 
+		std::vector<double> X_Z_metal_numeric;
+		XZ_VecForOpFile_numeric.push_back(X_Z_metal_numeric); 
 
 		//std::cout << "DEBUG 2" << std::endl;
 		
@@ -364,8 +392,8 @@ void SolarModel::ReadOpacityFileName(){
 			std::string cooz = name.substr(start_pos,end_pos-start_pos);
 			//std::cout << "[DEBUG] " << cooz << std::endl;
 
-			X_Z.push_back(cooz);
-			X_Z_numeric.push_back(std::stod(cooz));
+			X_Z_metal.push_back(cooz);
+			X_Z_metal_numeric.push_back(std::stod(cooz));
 
 			start_pos = end_pos + 1;	
 			possible_end_pos = name.find("-",start_pos+1);
@@ -387,13 +415,13 @@ void SolarModel::ReadOpacityFileName(){
 		//std::cout << "DEBUG 7" << std::endl;
 		std::string lastcooz = name.substr(start_pos,name.length()-7-start_pos);
 		//std::cout << "[DEBUG] " << lastcooz << std::endl;	
-		X_Z.push_back(lastcooz);
-		X_Z_numeric.push_back(std::stod(lastcooz));
-		//std::cout << "[DEBUG] " << "Length of string vector: " << X_Z.size() << std::endl;	
-		XZ_VecForOpFile.back() = X_Z;
-		XZ_VecForOpFile_numeric.back() = X_Z_numeric;
+		X_Z_metal.push_back(lastcooz);
+		X_Z_metal_numeric.push_back(std::stod(lastcooz));
+		//std::cout << "[DEBUG] " << "Length of string vector: " << X_Z_metal.size() << std::endl;	
+		XZ_VecForOpFile.back() = X_Z_metal;
+		XZ_VecForOpFile_numeric.back() = X_Z_metal_numeric;
 		//std::cout << "[DEBUG] " << "XZ_VecForOpFile stored" << std::endl;
-		//std::cout << "[DEBUG] " << X_Z[0] << std::endl;
+		//std::cout << "[DEBUG] " << X_Z_metal[0] << std::endl;
 		//std::cout << "[DEBUG] " << XZ_VecForOpFile[0][0] << std::endl;
 		//std::cout << "DEBUG 8" << std::endl;
 	}	
@@ -415,7 +443,7 @@ void SolarModel::ReadOpacityFileName(){
 
 /*
 compare XZ vector for ith row with XZ vector for jth file
-find distance between row[i].X_Z[k] and XZ_VecForOpFile[j][k]
+find distance between row[i].X_Z_metal[k] and XZ_VecForOpFile[j][k]
 */
 
 /*----------------------------------------------------------------------------------------
@@ -616,13 +644,10 @@ double SolarModel::ElementNumberDensity(double Z_massFrac, double zone_density, 
 /*-----------------------------------------------------------------------------------
 This function computes the absorption coefficients (k) in a sum over all nuclei.
 -----------------------------------------------------------------------------------*/ 
-double SolarModel::AbsorptionCoefficient(double E, double T, double Rho, double XZ, double op_xsec){
+double SolarModel::AbsorptionCoefficient(std::vector<double> &nZ, double E, double T, double op_xsec){
 	double k = 0.0;
-	//for(int j=0: j<28; j++){
-	//	k +=  NumberDensity(X_Z_all[j],std::stod(row[i].density),atomic_mass[j]) * op_xsec * (1 - exp(E/T))
-	//	k +=  NumberDensity(X_Z_all[j],Rho,atomic_mass[j]);                      * op_xsec * (1 - exp(E/T))
-	////}  
-	////return(k);
+	for(int j=0; j<29; j++)
+		k += nZ[j];
+	k *= op_xsec * (1 - exp(E/T));
+	return(k);
 }
-
-

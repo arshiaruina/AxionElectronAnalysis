@@ -37,7 +37,8 @@ struct ROW {
 	double Fe_massFrac = 0.0;
 	double Co_massFrac = 0.0;
 	double Ni_massFrac = 0.0;
-
+	
+	// mass fractions of the isotopes
 	double He_massFrac = 0.0;
 	double C_massFrac = 0.0;
 	double N_massFrac = 0.0;
@@ -45,27 +46,18 @@ struct ROW {
 
 	double total_metal_massFrac = 0.0;
 
-	std::vector<double> X_Z;
-	//double X_C  = 0.0;
-	//double X_N  = 0.0;
-	//double X_O  = 0.0;
-	//double X_Ne = 0.0;
-	//double X_Na = 0.0;
-	//double X_Mg = 0.0;
-	//double X_Al = 0.0;
-	//double X_Si = 0.0;
-	//double X_S  = 0.0;
-	//double X_Ar = 0.0;
-	//double X_Ca = 0.0;
-	//double X_Cr = 0.0;
-	//double X_Mn = 0.0;
-	//double X_Fe = 0.0;
-	//double X_Ni = 0.0;
+	// vector of mass fractions of the metallic elements corresponding to those given in the OP tables and unique for each layer of the sun as described in the solar model 
+	std::vector<double> X_Z_metal; 
 	
-	double opacity_value = 0.0;
-	std::vector<double> n_Z;
+	// vector of mass fractions of all the elements, unique for each layer of the sun as described in the solar model 
+	std::vector<double> X_Z; 
+	
+	double opacity_value = 0.0;	
 	double abs_coeff = 0.0;
 	double electron_density = 0.0;
+	
+	// vector of number densities of the elements corresponding to those given in the OP tables and unique for each layer of the sun as described in the solar model 
+	std::vector<double> n_Z;
  
 };
 
@@ -267,7 +259,7 @@ public:
 	double AccessOpacityFile(int, int, int, int); 
 	double ElectronNumberDensity(double, double);
 	double ElementNumberDensity(double,double,double);
-	double AbsorptionCoefficient(double, double,double,double,double);
+	double AbsorptionCoefficient(std::vector<double>&, double,double,double);
 };
 
 #endif // READFILE_H
