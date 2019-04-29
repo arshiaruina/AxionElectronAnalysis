@@ -54,14 +54,21 @@ int SolarModel::AccessSolarModel() {
 	solarmodel_file.open(solarmodel_filename.c_str());
 
 	if(!solarmodel_file.good()){
-        	std::cout << "Problem with file!" << std::endl;
+        	std::cout << "Problem with solar model file!" << std::endl;
 		return 1;
 	}
+
+	std::cout << "[INFO] Opening output file for storing the computed results..." << std::endl;
+	std::stringstream ss;
+	std::ofstream outfile1;
+	outfile1.open("electron_densities.txt");
+        ss << std::setw(15) << std::left << "r [R_sun]" << std::setw(20) << std::left << "e #density [cm**-3]" << std::setw(20) << std::left << "e #density [eV**3]" << std::endl;
+
 
         std::cout << "[INFO] Reading solar model file... " << std::endl;
 	//++lineNumber;
 
-        while(!solarmodel_file.eof() && lineNumber < 50) {
+        while(!solarmodel_file.eof() /*&& lineNumber < 50*/) {
 		std::getline(solarmodel_file, line);
                 std::istringstream iss_line(line);
                 if(line.find("#")==0 || line.empty()) {
@@ -284,15 +291,25 @@ int SolarModel::AccessSolarModel() {
 			row[i].opacity_value = AccessOpacityFile(SelectedOpacityFile, SelectedHandHemassFrac, SelectedlogR, SelectedlogT);
 			std::cout << "Opacity xsec stored for this row: " << row[i].opacity_value << std::endl; 
 			
-                        std::cout << "[INFO] Calling the function to compute the electron number density..." << std::endl;
+			//TODO--> Calculate the n_Z
+
+                        //std::cout << "[INFO] Calling the function to compute the absorption coefficient..." << std::endl;
+			//row[i].abs_coeff = AbsorptionCoefficient(row[i].n_Z, row[i].opacity_value, row[i].temp);
+			//std::cout << "Absorption coefficient for this row: " << row[i].abs_coeff << std::endl;
+                        
+			std::cout << "[INFO] Calling the function to compute the electron number density..." << std::endl;
 			row[i].electron_density = ElectronNumberDensity(row[i].density, row[i].H_massFrac);
 			std::cout << "Electron number density stored for this row: " << row[i].electron_density << std::endl;
+
+			ss << std::setw(15) << std::left << row[i].radius << std::setw(20) << std::left << row[i].electron_density << std::setw(20) << std::left << row[i].electron_density*7.645e-24 << std::endl;
 
 			std::cout << std::endl;	
                         ++i;
 		}	
 	        ++lineNumber;
 	}
+	outfile1 << ss.str() << std::endl;
+	outfile1.close();
 }
 
 /*----------------------------------------------------------------------------------------
@@ -600,12 +617,12 @@ double SolarModel::ElementNumberDensity(double Z_massFrac, double zone_density, 
 This function computes the absorption coefficients (k) in a sum over all nuclei.
 -----------------------------------------------------------------------------------*/ 
 double SolarModel::AbsorptionCoefficient(double E, double T, double Rho, double XZ, double op_xsec){
-	//double k = 0.0;
+	double k = 0.0;
 	//for(int j=0: j<28; j++){
-	//	//k += op_xsec * (1 - exp(E/T)) * NumberDensity(X_Z_all[j],std::stod(row[i].density),atomic_mass[j]);
-	//	k += op_xsec * (1 - exp(E/T)) * NumberDensity(X_Z_all[j],Rho,atomic_mass[j]);
-	//}  
-	//return(k);
+	//	k +=  NumberDensity(X_Z_all[j],std::stod(row[i].density),atomic_mass[j]) * op_xsec * (1 - exp(E/T))
+	//	k +=  NumberDensity(X_Z_all[j],Rho,atomic_mass[j]);                      * op_xsec * (1 - exp(E/T))
+	////}  
+	////return(k);
 }
 
 
