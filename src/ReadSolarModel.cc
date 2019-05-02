@@ -281,10 +281,13 @@ int SolarModel::AccessSolarModel() {
 			row[i].opacity_value = AccessOpacityFile(SelectedOpacityFile, SelectedHandHemassFrac, SelectedlogR, SelectedlogT);
 			std::cout << "Opacity xsec stored for this row: " << row[i].opacity_value << std::endl; 
 			
+			/*-------------------------------------- Number density ------------------------------------*/
+		
 			std::cout << "Number densities n_Z being computed..." << std::endl;
 			for(int j=0; j<29; j++)
 				row[i].n_Z.push_back(0.0);
 			//TODO--> Make this efficient!
+			row[i].n_Z[0] = (row[i].H_massFrac / atomic_mass[0]) * (row[i].density / amu); 
 			row[i].n_Z[1] = (row[i].He4_massFrac / atomic_mass[1]) * (row[i].density / amu); 
 			row[i].n_Z[2] = (row[i].He3_massFrac / atomic_mass[2]) * (row[i].density / amu);
 			row[i].n_Z[3] = (row[i].C12_massFrac / atomic_mass[3]) * (row[i].density / amu);
@@ -314,21 +317,55 @@ int SolarModel::AccessSolarModel() {
 			row[i].n_Z[27] = (row[i].Co_massFrac / atomic_mass[27]) * (row[i].density / amu);
 			row[i].n_Z[28] = (row[i].Ni_massFrac / atomic_mass[28]) * (row[i].density / amu);
 
-			double energy = 0.1;
-                        std::cout << "[INFO] Calling the function to compute the absorption coefficient..." << std::endl;
-			row[i].abs_coeff = AbsorptionCoefficient(row[i].n_Z, energy, row[i].temp, row[i].opacity_value);
+			double energy = 0.1;//random value just for the time being. TODO: Put in the actual vector of energy values!
+			double w = energy/row[i].temp;
+
+			/*-------------------------------------- Absorption coefficient ------------------------------------*/
+
+                        std::cout << "[INFO] Computing the absorption coefficient..." << std::endl;
+			for(int j=0; j<29; j++)
+				row[i].abs_coeff += row[i].n_Z[j];
+			row[i].abs_coeff *= row[i].opacity_value * (1-exp(w));
 			std::cout << "Absorption coefficient for this row: " << row[i].abs_coeff << std::endl;
-                        
-			std::cout << "[INFO] Calling the function to compute the electron number density..." << std::endl;
-			row[i].electron_density = ElectronNumberDensity(row[i].density, row[i].H_massFrac);
-			std::cout << "Electron number density stored for this row: " << row[i].electron_density << std::endl;
+                       
+			/*-------------------------------------- Electron number density ------------------------------------*/
 
-			ss << std::setw(15) << std::left << row[i].radius << std::setw(20) << std::left << row[i].electron_density << std::setw(20) << std::left << row[i].electron_density*7.645e-24 << std::endl;
+			std::cout << "[INFO] Computing the electron number density..." << std::endl;
+			row[i].n_e = (row[i].density/amu) * (1+row[i].H_massFrac)/2;
+			std::cout << "Electron number density stored for this row: " << row[i].n_e << std::endl;
 
-			std::cout << "[INFO] Calling the function to compute the Compton Emission Rate..." << std::endl;
-			row[i].compton_emrate = ComptonEmissionRate(energy,row[i].temp,row[i].electron_density);
+			ss << std::setw(15) << std::left << row[i].radius << std::setw(20) << std::left << row[i].n_e << std::setw(20) << std::left << row[i].n_e*7.645e-24 << std::endl;
+	
+			/*-------------------------------------- Compton emission rate ------------------------------------*/
+
+			std::cout << "[INFO] Computing the Compton Emission Rate..." << std::endl;
+			row[i].compton_emrate = (alpha * g_ae * g_ae * energy * energy * row[i].n_e * row[i].n_e)/(3 * m_e * m_e * (exp(w)-1));
 			std::cout << "Compton emission rate for this row: " << row[i].compton_emrate << std::endl;
 
+			/*-------------------------------------- Debye screening scale ------------------------------------*/
+	
+			std::cout << "[INFO] Computing the Debye screening scale..." << std::endl; 
+			row[i].debye_scale = (4 * M_PI * alpha / row[i].temp) * (row[i].n_e + row[i].n_Z[0] + row[i].n_Z[1]);//making the same approximation as for n_e calculation 
+			std::cout << "Debye screening scale for this row: " << row[i].debye_scale << std::endl;
+			
+			double y = row[i].debye_scale/(std::sqrt(2*m_e*row[i].temp));
+				
+			///*-------------------------------------- TODO: Integrals ------------------------------------*/
+			//
+			//double func1 = (t*t*t)/((t*t+y*y)*(t*t+y*y));
+			//double up1 = std::sqrt(x*x-w) + x;
+			//double low1 = std::sqrt(x*x-w) - x;
+			//double func2 = x*exp(-x*x)*Integrate(func1,low1,up1);
+			//double up2 = inf;
+			//double low2 = 0;
+			//double F = Integrate(func2,low2,up2);
+			//
+			///*-------------------------------------- Bremsstrahlung emission rate ------------------------------------*/
+	
+			//std::cout << "[INFO] Computing the Bremsstrahlunf emission rate..." << std::endl; 
+			//row[i].brems_emrate = alpha * alpha * g_ae * g_ae * (4/3) * std::sqrt(M_PI) * row[i].n_e * row[i].n_e * exp(-w) * F(w,std::sqrt(2)*y) / (std::sqrt(row[i].temp) * std::pow(m_e,3.5) * energy);
+			//std::cout << "Bremsstrahlung emission rate for this row: " << row[i].brems_emrate << std::endl;
+			
 			std::cout << std::endl;	
                         ++i;
 		}	
@@ -337,6 +374,8 @@ int SolarModel::AccessSolarModel() {
 	outfile1 << ss.str() << std::endl;
 	outfile1.close();
 }
+
+
 
 /*----------------------------------------------------------------------------------------
 This function reads all the opacity filenames, extracts the metal mass fractions from them
@@ -604,57 +643,4 @@ double SolarModel::AccessOpacityFile(int s, int HandHe, int R, int T) {
 		}
 	}
 }
-
-
-/*TODO: 
-
---->>> Input energy values!
-
-Write separate functions to compute the following -->
-1. DONE number density of an element (from a given mass fraction)
-2. DONE number density of electrons
-3. DONE absorption coefficient
-4. DONE Compton emission rate
-5. Bremsstrahlung emission rate
-6. F(w,y)
-7. a general integral function
-8. differential flux (as a function of energy and radial position inside the sun)
-
-Maybe later separate this whole part into a separate file.
-*/
-
-/*-----------------------------------------------------------------------------------
-Number density of electrons is computed using the following assumptions:
-1. H_massFrac + He_massFrac ~ 1
-2. Totally ionised ions
-TODO later: Check the validity of these assumptions
-------------------------------------------------------------------------------------*/ 
-double SolarModel::ElectronNumberDensity(double zone_density, double H_massFrac){
-
-	return((zone_density/amu)*(1+H_massFrac)/2);
-}
-
-/*-----------------------------------------------------------------------------------
-This function computes the density of atoms with atomic number Z (n_Z).
-------------------------------------------------------------------------------------*/ 
-double SolarModel::ElementNumberDensity(double Z_massFrac, double zone_density, double Z_atomicMass) { // called iteratively for each element in AbsorptionCoefficient()
-
-	return ((Z_massFrac * zone_density) / (Z_atomicMass * amu));
-}
-
-/*-----------------------------------------------------------------------------------
-This function computes the absorption coefficients (k) in a sum over all nuclei.
------------------------------------------------------------------------------------*/ 
-double SolarModel::AbsorptionCoefficient(std::vector<double> &nZ, double E, double T, double op_xsec){
-	double k = 0.0;
-	for(int j=0; j<29; j++)
-		k += nZ[j];
-	k *= op_xsec * (1 - exp(E/T));
-	return(k);
-}
-
-double SolarModel::ComptonEmissionRate(double E, double T, double n_e){
-	return((alpha * g_ae * g_ae * E * E * n_e)/(3 * m_e * m_e * (exp(E/T)-1) ));
-}
-
 

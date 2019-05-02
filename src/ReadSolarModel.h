@@ -54,13 +54,15 @@ struct ROW {
 	
 	double opacity_value = 0.0;	
 	double abs_coeff = 0.0;
-	double electron_density = 0.0;
+	double n_e = 0.0;
 	
 	// vector of number densities of the elements corresponding to those given in the OP tables and unique for each layer of the sun as described in the solar model 
 	std::vector<double> n_Z;
 
 	double compton_emrate = 0.0;
- 
+	double brems_emrate = 0.0;
+	double debye_scale = 0.0;
+	 
 };
 
 struct DISVAL { 
@@ -259,10 +261,10 @@ public:
 	int GetTableIndex();
 	int AccessSolarModel();
 	double AccessOpacityFile(int, int, int, int); 
-	double ElectronNumberDensity(double, double);
-	double ElementNumberDensity(double,double,double);
-	double AbsorptionCoefficient(std::vector<double>&, double,double,double);
-	double ComptonEmissionRate(double, double, double);
+	//double ElectronNumberDensity(double, double);
+	//double ElementNumberDensity(double,double,double);
+	//double AbsorptionCoefficient(std::vector<double>&, double,double,double);
+	//double ComptonEmissionRate(double, double, double);
 };
 
 #endif // READFILE_H
