@@ -61,7 +61,7 @@ int SolarModel::AccessSolarModel() {
 	std::cout << "[INFO] Opening output file for storing the computed results..." << std::endl;
 	std::stringstream ss;
 	std::ofstream outfile1;
-	outfile1.open("electron_densities.txt");
+	outfile1.open("../results/electron_densities.txt");
         ss << std::setw(15) << std::left << "r [R_sun]" << std::setw(20) << std::left << "e #density [cm**-3]" << std::setw(20) << std::left << "e #density [eV**3]" << std::endl;
 
 
@@ -284,12 +284,6 @@ int SolarModel::AccessSolarModel() {
 			std::cout << "Number densities n_Z being computed..." << std::endl;
 			for(int j=0; j<29; j++)
 				row[i].n_Z.push_back(0.0);
-			//row[i].n_Z[0] = (row[i].H_massFrac / atomic_mass[0]) * (row[i].density / amu);  
-			std::cout << row[i].H_massFrac << std::endl;
-			std::cout << atomic_mass[0] << std::endl;
-			std::cout << row[i].density << std::endl;
-			std::cout << amu << std::endl;  
-			std::cout << "[DEBUG] " << row[i].n_Z[0] << std::endl;
 			//TODO--> Make this efficient!
 			row[i].n_Z[1] = (row[i].He4_massFrac / atomic_mass[1]) * (row[i].density / amu); 
 			row[i].n_Z[2] = (row[i].He3_massFrac / atomic_mass[2]) * (row[i].density / amu);
@@ -330,6 +324,10 @@ int SolarModel::AccessSolarModel() {
 			std::cout << "Electron number density stored for this row: " << row[i].electron_density << std::endl;
 
 			ss << std::setw(15) << std::left << row[i].radius << std::setw(20) << std::left << row[i].electron_density << std::setw(20) << std::left << row[i].electron_density*7.645e-24 << std::endl;
+
+			std::cout << "[INFO] Calling the function to compute the Compton Emission Rate..." << std::endl;
+			row[i].compton_emrate = ComptonEmissionRate(energy,row[i].temp,row[i].electron_density);
+			std::cout << "Compton emission rate for this row: " << row[i].compton_emrate << std::endl;
 
 			std::cout << std::endl;	
                         ++i;
@@ -609,11 +607,14 @@ double SolarModel::AccessOpacityFile(int s, int HandHe, int R, int T) {
 
 
 /*TODO: 
+
+--->>> Input energy values!
+
 Write separate functions to compute the following -->
-1. number density of an element (from a given mass fraction)
-2. number density of electrons
-3. absorption coefficient
-4. Compton emission rate
+1. DONE number density of an element (from a given mass fraction)
+2. DONE number density of electrons
+3. DONE absorption coefficient
+4. DONE Compton emission rate
 5. Bremsstrahlung emission rate
 6. F(w,y)
 7. a general integral function
@@ -651,3 +652,9 @@ double SolarModel::AbsorptionCoefficient(std::vector<double> &nZ, double E, doub
 	k *= op_xsec * (1 - exp(E/T));
 	return(k);
 }
+
+double SolarModel::ComptonEmissionRate(double E, double T, double n_e){
+	return((alpha * g_ae * g_ae * E * E * n_e)/(3 * m_e * m_e * (exp(E/T)-1) ));
+}
+
+

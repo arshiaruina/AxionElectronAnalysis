@@ -58,6 +58,8 @@ struct ROW {
 	
 	// vector of number densities of the elements corresponding to those given in the OP tables and unique for each layer of the sun as described in the solar model 
 	std::vector<double> n_Z;
+
+	double compton_emrate = 0.0;
  
 };
 
@@ -115,9 +117,9 @@ private:
 	// * standard atomic weight
 	// ** middle of range of standard atomic weight
 	const double amu = 1.6605e-24; //grams
-	const double alpha = 1/137;
+	const double alpha = 1.0/137.0;
 	const double m_e = 9.109e-28; //grams
-	const double g_ae = 10^-12;
+	const double g_ae = 1e-12;
 
 	//opacity files downloaded on 28 Jan 2019
 	std::vector<std::string> OpacityFiles= {
@@ -260,6 +262,7 @@ public:
 	double ElectronNumberDensity(double, double);
 	double ElementNumberDensity(double,double,double);
 	double AbsorptionCoefficient(std::vector<double>&, double,double,double);
+	double ComptonEmissionRate(double, double, double);
 };
 
 #endif // READFILE_H
