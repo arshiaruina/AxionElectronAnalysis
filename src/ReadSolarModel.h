@@ -1,5 +1,6 @@
 #ifndef READFILE_H
 #define READFILE_H
+#include <complex>
 
 struct ROW {
 	double massFrac = 0.0;	// in units of solar mass
@@ -267,5 +268,14 @@ public:
 	//double ComptonEmissionRate(double, double, double);
 };
 
+class Integration{
+private:
+	const int N=5;
+public:
+	double F(double, double);
+	std::vector<double> laguerreCoef();
+	std::vector<std::complex<double>> laguerreRootsPy(std::vector<double>);
+	std::complex<double> func(std::complex<double>);
+};
 #endif // READFILE_H
 

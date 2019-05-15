@@ -11,6 +11,13 @@
 #include <cmath>
 #include <algorithm>
 #include "ReadSolarModel.h"
+#include <pybind11/embed.h>
+#include <pybind11/numpy.h>
+#include <pybind11/stl.h>          // mandatory for myPyObject.cast<std::vector<T>>()
+#include <pybind11/functional.h>
+#include <complex>
+
+namespace py = pybind11;
 
 int main(){	
 	SolarModel f;
@@ -18,7 +25,6 @@ int main(){
 	//f.MetalMassFraction();
 	f.ReadOpacityFileName();
     	f.AccessSolarModel();
-	
 	return 0;
 }
 
@@ -68,7 +74,7 @@ int SolarModel::AccessSolarModel() {
         std::cout << "[INFO] Reading solar model file... " << std::endl;
 	//++lineNumber;
 
-        while(!solarmodel_file.eof() && lineNumber < 50) {
+        while(!solarmodel_file.eof() && lineNumber < 24) {
 		std::getline(solarmodel_file, line);
                 std::istringstream iss_line(line);
                 if(line.find("#")==0 || line.empty()) {
@@ -317,7 +323,7 @@ int SolarModel::AccessSolarModel() {
 			row[i].n_Z[27] = (row[i].Co_massFrac / atomic_mass[27]) * (row[i].density / amu);
 			row[i].n_Z[28] = (row[i].Ni_massFrac / atomic_mass[28]) * (row[i].density / amu);
 
-			double energy = 0.1;//random value just for the time being. TODO: Put in the actual vector of energy values!
+			double energy = 0.001;//random value just for the time being. TODO: Put in the actual vector of energy values!
 			double w = energy/row[i].temp;
 
 			/*-------------------------------------- Absorption coefficient ------------------------------------*/
@@ -362,10 +368,14 @@ int SolarModel::AccessSolarModel() {
 			//
 			///*-------------------------------------- Bremsstrahlung emission rate ------------------------------------*/
 	
-			//std::cout << "[INFO] Computing the Bremsstrahlunf emission rate..." << std::endl; 
-			//row[i].brems_emrate = alpha * alpha * g_ae * g_ae * (4/3) * std::sqrt(M_PI) * row[i].n_e * row[i].n_e * exp(-w) * F(w,std::sqrt(2)*y) / (std::sqrt(row[i].temp) * std::pow(m_e,3.5) * energy);
+			Integration GaussLag;
+			GaussLag.F(w,std::sqrt(2)*y);
+
+			//std::cout << "[INFO] Computing the Bremsstrahlung emission rate..." << std::endl; 
+			//row[i].brems_emrate = alpha * alpha * g_ae * g_ae * (4/3) * std::sqrt(M_PI) * row[i].n_e * row[i].n_e * exp(-w) * GaussLag.F(w,std::sqrt(2)*y) / (std::sqrt(row[i].temp) * std::pow(m_e,3.5) * energy);
 			//std::cout << "Bremsstrahlung emission rate for this row: " << row[i].brems_emrate << std::endl;
 			
+
 			std::cout << std::endl;	
                         ++i;
 		}	
@@ -374,6 +384,124 @@ int SolarModel::AccessSolarModel() {
 	outfile1 << ss.str() << std::endl;
 	outfile1.close();
 }
+
+
+/*----------------------------------------------------------------------------------------
+This function computes the integral as given in equation 2.16 in J. Redondo's paper.
+It is required in the computation of the Bremsstrahlung emission rate. It is an improper 
+integral in that the bounds of x are 0 and inf. It has been attempted here to solve this 
+https://rosettacode.org/wiki/Numerical_integration/Gauss-Legendre_Quadrature
+----------------------------------------------------------------------------------------*/
+double Integration::F(double _w, double _y){
+
+	std::complex<double> Result(0,0);
+
+	//this->laguerreCoef();
+	
+	std::vector<double> coefficients = this->laguerreCoef();
+	//for(int i=N; i>=0; i--){
+	//	coef_arr.push_back(lcoef[N][i]);
+	//}
+	
+	std::vector<std::complex<double>> roots = this->laguerreRootsPy(coefficients);
+
+	for(int i=1; i<=N; i++){
+		Result += this->func(roots[i]);
+	}
+
+	std::cout << Result << std::endl;
+
+	//std::vector<double> poly = {1.0, 2.0, 3.0, 4.0};
+	//std::cout << "Before call" << std::endl;
+	//std::vector<std::complex<double>> retVal = this->callPy(poly);
+
+	//std::cout << "Resulting vector " << std::endl;
+	//for(auto val : retVal){
+	//	std::cout << "val : " << val << std::endl;
+	//}
+
+	//this->laguerre_roots();
+
+}
+ 
+std::complex<double> Integration::func(std::complex<double> x){
+	return x*x;
+}
+
+
+std::vector<double> Integration::laguerreCoef()
+{
+        //double lroots[N];
+        //double weight[N];
+	std::vector<double> res_coef;
+        double lcoef[N + 1][N + 1] = {{0}};
+
+	int n, i;
+	lcoef[0][0] = lcoef[1][0] = 1.; lcoef[1][1]  = -1.;//coeffs of the first two polynomials
+	for (n = 2; n <= N; n++) { //n-th polynomial
+		lcoef[n][0] = 1.; //constants of all Laguerre polynomials are = 1
+		for (i = 1; i <= n; i++) //i-th power of x in the n-th polynomial
+			lcoef[n][i] = ( (2*n-1)*lcoef[n-1][i] - lcoef[n-1][i-1] + (1-n)*lcoef[n-2][i] ) / n;
+	}
+
+	/*      Uncomment the following 12 lines to display the coefficients of the Laguerre polynomials     */
+        
+	std::cout << "-------- Coefficients for i-th power (i-th column) of x in the n-th polynomial (n-th row) --------" << std::endl;
+	for(int b=0; b<=N; b++){
+		std::cout << "\t" << b ;
+	}
+	std::cout << std::endl;
+	for(int a=0; a<=N; a++){
+		std::cout << a << "\t";
+                for(int b=0; b<=a; b++){
+                        std::cout << std::setprecision(3) << std::fixed << lcoef[a][b] << "\t";
+                }
+                std::cout << std::endl;
+        }
+	
+	//storing the coefficients of the N-th order polynomial only whose roots will be computed
+        for(int i=N; i>=0; i--){
+                res_coef.push_back(lcoef[N][i]);
+        }
+
+	return res_coef;
+
+}
+
+//std::vector<std::complex<double>> callPy(std::vector<double> poly);
+
+//void Integration::laguerre_roots(){
+//
+//    std::vector<double> poly = {1.0, 2.0, 3.0, 4.0};
+//
+//    std::cout << "Before call" << std::endl;
+//
+//    auto retVal = callPy(poly);
+//    std::cout << "Resulting vector " << std::endl;
+//    for(auto val : retVal){
+//        std::cout << "val : " << val << std::endl;
+//    }	
+//
+//}
+
+std::vector<std::complex<double>> Integration::laguerreRootsPy(std::vector<double> poly){
+    static py::scoped_interpreter guard{};
+    std::cout << "import numpy" << std::endl;
+    py::module np = py::module::import("numpy");
+    std::cout << "cast poly" << std::endl;
+    py::array_t<double> polyNumpy = py::cast(poly);
+    std::cout << "access roots" << std::endl;
+    py::object roots = np.attr("roots");
+    std::cout << "call roots" << std::endl;
+    py::object retVal = roots(polyNumpy);
+    std::cout << "echo result" << std::endl;
+    std::cout << retVal << std::endl;
+
+    return retVal.cast<std::vector<std::complex<double>>>();
+
+}
+
+
 
 
 
