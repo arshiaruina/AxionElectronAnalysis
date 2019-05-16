@@ -420,49 +420,16 @@ double Integration::F(){
 	std::vector<double> roots = this->laguerreRootsPy(coefficients);
 
 	for(int i=0; i<N; i++){
-		Result += this->func(roots[i]);
+		Result += this->func(roots[i]) * this->weight(N,roots[i]);
+		std::cout << "w_i: " << this->weight(N,roots[i]) << std::endl;
 		std::cout << "Result: " << Result << std::endl;
+		std::cout << std::endl;
 	}
 
 	std::cout << "Final result: " << Result << std::endl;
 
-	//std::vector<double> poly = {1.0, 2.0, 3.0, 4.0};
-	//std::cout << "Before call" << std::endl;
-	//std::vector<std::complex<double>> retVal = this->callPy(poly);
-
-	//std::cout << "Resulting vector " << std::endl;
-	//for(auto val : retVal){
-	//	std::cout << "val : " << val << std::endl;
-	//}
-
-	//this->laguerre_roots();
-
 }
  
-//std::complex<double> Integration::func(std::complex<double> x){ 
-double Integration::func(double x){ 
-	double up_lim = std::sqrt(x+this->_w) + std::sqrt(x);
-	double lo_lim = std::sqrt(x+this->_w) - std::sqrt(x);
-	std::cout << "w: " << this->_w << std::endl;
-	std::cout << "sqrt(x+w): " << std::sqrt(x+this->_w) << std::endl;
-	std::cout << "sqrt(x): " << std::sqrt(x) << std::endl;
-	std::cout << "i-th root: " << x << std::endl;
-	std::cout << "Upper limit: " << up_lim << std::endl;
-	std::cout << "Lower limit: " << lo_lim << std::endl;
-	std::cout << "first_integral(up_lim):  " << first_integral(up_lim) << std::endl;
-	std::cout << "first_integral(lo_lim):  " << first_integral(lo_lim) << std::endl;
-	std::cout << "f(x_i):  " << first_integral(up_lim) - first_integral(lo_lim) << std::endl;
-	std::cout << std::endl;
-
-	return first_integral(up_lim) - first_integral(lo_lim);	
-}
-
-
-double Integration::first_integral(double t){
-	double var_y = this->_y;
-	return (1./2.) * ( ((var_y*var_y) / (t*t + var_y*var_y)) + log( t*t + var_y*var_y ) );
-}
-
 
 std::vector<double> Integration::laguerreCoef()
 {
@@ -503,22 +470,7 @@ std::vector<double> Integration::laguerreCoef()
 
 }
 
-//std::vector<std::complex<double>> callPy(std::vector<double> poly);
-
-//void Integration::laguerre_roots(){
-//
-//    std::vector<double> poly = {1.0, 2.0, 3.0, 4.0};
-//
-//    std::cout << "Before call" << std::endl;
-//
-//    auto retVal = callPy(poly);
-//    std::cout << "Resulting vector " << std::endl;
-//    for(auto val : retVal){
-//        std::cout << "val : " << val << std::endl;
-//    }	
-//
-//}
-
+//        std::cout << "val : " << val
 //std::vector<std::complex<double>> Integration::laguerreRootsPy(std::vector<double> poly){
 std::vector<double> Integration::laguerreRootsPy(std::vector<double> poly){
 
@@ -540,8 +492,56 @@ std::vector<double> Integration::laguerreRootsPy(std::vector<double> poly){
 }
 
 
+//std::complex<double> Integration::func(std::complex<double> x){ 
+double Integration::func(double x){
+        double up_lim = std::sqrt(x+this->_w) + std::sqrt(x);
+        double lo_lim = std::sqrt(x+this->_w) - std::sqrt(x);
+        std::cout << "w: " << this->_w << std::endl;
+        std::cout << "sqrt(x+w): " << std::sqrt(x+this->_w) << std::endl;
+        std::cout << "sqrt(x): " << std::sqrt(x) << std::endl;
+        std::cout << "i-th root: " << x << std::endl;
+        std::cout << "Upper limit: " << up_lim << std::endl;
+        std::cout << "Lower limit: " << lo_lim << std::endl;
+        std::cout << "first_integral(up_lim):  " << first_integral(up_lim) << std::endl;
+        std::cout << "first_integral(lo_lim):  " << first_integral(lo_lim) << std::endl;
+        std::cout << "f(x_i):  " << first_integral(up_lim) - first_integral(lo_lim) << std::endl;
+
+        return first_integral(up_lim) - first_integral(lo_lim);
+}
 
 
+double Integration::first_integral(double t){
+        double var_y = this->_y;
+        return (1./2.) * ( ((var_y*var_y) / (t*t + var_y*var_y)) + log( t*t + var_y*var_y ) );
+}
+
+
+double Integration::laguerreDeriv(int n, double x){
+	if(n>0)
+		return laguerreDeriv(n-1,x) - laguerreEval(n-1,x);
+	if(n==0)
+		return 0.;
+}
+
+double Integration::laguerreEval(int n, double x){
+	if(n>0)
+		return (2*n-1-x)*laguerreEval(n-1,x) - (1.-(1./n))*laguerreEval(n-2,x);
+	if(n==1)
+		return 1-x;
+	if(n==0)
+		return 1;
+}
+
+//int Integration::factorial(int n){
+//	if(n>0)
+//		return n * factorial(n-1);
+//	if(n==0)
+//		return 1;
+//}
+
+double Integration::weight(int n, double x){
+	return 1./(x * pow(laguerreDeriv(n,x),2) );
+}
 
 /*----------------------------------------------------------------------------------------
 This function reads all the opacity filenames, extracts the metal mass fractions from them

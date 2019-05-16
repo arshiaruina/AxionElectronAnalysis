@@ -274,7 +274,8 @@ public:
 
 class Integration{
 public:
-	const int N=5;
+	int N = 5;
+	//double lcoef [][];
 	double _w = 0.0;
 	double _y = 0.0;
 public:
@@ -285,6 +286,9 @@ public:
 	//std::complex<double> func(std::complex<double>);
 	double func(double);
 	double first_integral(double);
+	double laguerreDeriv(int,double);
+	double laguerreEval(int,double);
+	double weight(int,double);
 };
 #endif // READFILE_H
 
