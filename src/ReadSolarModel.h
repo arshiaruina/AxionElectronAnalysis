@@ -1,11 +1,12 @@
 #ifndef READFILE_H
 #define READFILE_H
-#include <complex>
+//#include <complex>
 
 struct ROW {
 	double massFrac = 0.0;	// in units of solar mass
 	double radius = 0.0;	// in units of solar radius
 	double temp = 0.0;	// in Kelvin
+	double temp_keV = 0.0;	// in keV
 	double density = 0.0;	// in gm per cubic cm
 	double pressure = 0.0;	// in dyne per squared cm
 	double lumiFrac = 0.0;	// in units of the solar luminosity
@@ -56,6 +57,7 @@ struct ROW {
 	double opacity_value = 0.0;	
 	double abs_coeff = 0.0;
 	double n_e = 0.0;
+	double n_e_keV = 0.0;
 	
 	// vector of number densities of the elements corresponding to those given in the OP tables and unique for each layer of the sun as described in the solar model 
 	std::vector<double> n_Z;
@@ -63,7 +65,8 @@ struct ROW {
 	double compton_emrate = 0.0;
 	double brems_emrate = 0.0;
 	double debye_scale = 0.0;
-	 
+	double w = 0.0; // w = \omega/T 
+	double y = 0.0; // y = (k_s)/sqrt(2*m_e*T)	 
 };
 
 struct DISVAL { 
@@ -122,6 +125,7 @@ private:
 	const double amu = 1.6605e-24; //grams
 	const double alpha = 1.0/137.0;
 	const double m_e = 9.109e-28; //grams
+	const double m_e_keV = 510.998; //keV
 	const double g_ae = 1e-12;
 
 	//opacity files downloaded on 28 Jan 2019
@@ -269,13 +273,18 @@ public:
 };
 
 class Integration{
-private:
-	const int N=5;
 public:
-	double F(double, double);
+	const int N=5;
+	double _w = 0.0;
+	double _y = 0.0;
+public:
+	double F();
 	std::vector<double> laguerreCoef();
-	std::vector<std::complex<double>> laguerreRootsPy(std::vector<double>);
-	std::complex<double> func(std::complex<double>);
+	//std::vector<std::complex<double>> laguerreRootsPy(std::vector<double>);
+	std::vector<double> laguerreRootsPy(std::vector<double>);
+	//std::complex<double> func(std::complex<double>);
+	double func(double);
+	double first_integral(double);
 };
 #endif // READFILE_H
 

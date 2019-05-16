@@ -15,7 +15,7 @@
 #include <pybind11/numpy.h>
 #include <pybind11/stl.h>          // mandatory for myPyObject.cast<std::vector<T>>()
 #include <pybind11/functional.h>
-#include <complex>
+//#include <complex>
 
 namespace py = pybind11;
 
@@ -86,7 +86,9 @@ int SolarModel::AccessSolarModel() {
 			row.push_back(ROW());
 			//TODO--> Make this efficient!
 			iss_line >> row[i].massFrac >> row[i].radius >> row[i].temp >> row[i].density >> row[i].pressure >> row[i].lumiFrac >> row[i].H_massFrac >> row[i].He4_massFrac >> row[i].He3_massFrac >> row[i].C12_massFrac >> row[i].C13_massFrac >> row[i].N14_massFrac >> row[i].N15_massFrac >> row[i].O16_massFrac >> row[i].O17_massFrac >> row[i].O18_massFrac >> row[i].Ne_massFrac >> row[i].Na_massFrac >> row[i].Mg_massFrac >> row[i].Al_massFrac >> row[i].Si_massFrac >> row[i].P_massFrac >> row[i].S_massFrac >> row[i].Cl_massFrac >> row[i].Ar_massFrac >> row[i].K_massFrac >> row[i].Ca_massFrac >> row[i].Sc_massFrac >> row[i].Ti_massFrac >> row[i].V_massFrac >> row[i].Cr_massFrac >> row[i].Mn_massFrac >> row[i].Fe_massFrac >> row[i].Co_massFrac >> row[i].Ni_massFrac;
-			
+	
+			row[i].temp_keV	= row[i].temp * 8.621738e-8;
+	
 			/*------------------------------------------------------------------------------------------------------------------
 			   The isotopes don't need to be summed up in order to make the comparison with the OP filenames and select an OP file
 			   because from the atomic weights mentioned in the OP tables, one can infer that they use the most abundant isotope.
@@ -323,38 +325,46 @@ int SolarModel::AccessSolarModel() {
 			row[i].n_Z[27] = (row[i].Co_massFrac / atomic_mass[27]) * (row[i].density / amu);
 			row[i].n_Z[28] = (row[i].Ni_massFrac / atomic_mass[28]) * (row[i].density / amu);
 
-			double energy = 0.001;//random value just for the time being. TODO: Put in the actual vector of energy values!
-			double w = energy/row[i].temp;
+			double energy = 3.;//keV //random value just for the time being. TODO: Put in the actual vector of energy values!
+			row[i].w = energy/(row[i].temp_keV); //temp in keV;
+			std::cout << "w for this row: " << row[i].w << std::endl;
 
 			/*-------------------------------------- Absorption coefficient ------------------------------------*/
 
                         std::cout << "[INFO] Computing the absorption coefficient..." << std::endl;
 			for(int j=0; j<29; j++)
-				row[i].abs_coeff += row[i].n_Z[j];
-			row[i].abs_coeff *= row[i].opacity_value * (1-exp(w));
+				//row[i].abs_coeff += row[i].n_Z[j]i;
+				row[i].abs_coeff += row[i].n_Z[j] * 7.645e-24;
+			//row[i].abs_coeff *= row[i].opacity_value * (1-exp(row[i].w));
+			row[i].abs_coeff *= row[i].opacity_value * (1-exp(row[i].w));
 			std::cout << "Absorption coefficient for this row: " << row[i].abs_coeff << std::endl;
                        
 			/*-------------------------------------- Electron number density ------------------------------------*/
 
 			std::cout << "[INFO] Computing the electron number density..." << std::endl;
 			row[i].n_e = (row[i].density/amu) * (1+row[i].H_massFrac)/2;
+			row[i].n_e_keV = row[i].n_e * 7.645e-24;
 			std::cout << "Electron number density stored for this row: " << row[i].n_e << std::endl;
+			std::cout << "Electron number density stored for this row [keV]: " << row[i].n_e_keV << std::endl;
 
-			ss << std::setw(15) << std::left << row[i].radius << std::setw(20) << std::left << row[i].n_e << std::setw(20) << std::left << row[i].n_e*7.645e-24 << std::endl;
+			ss << std::setw(15) << std::left << row[i].radius << std::setw(20) << std::left << row[i].n_e << std::setw(20) << std::left << row[i].n_e_keV << std::endl;
 	
 			/*-------------------------------------- Compton emission rate ------------------------------------*/
 
 			std::cout << "[INFO] Computing the Compton Emission Rate..." << std::endl;
-			row[i].compton_emrate = (alpha * g_ae * g_ae * energy * energy * row[i].n_e * row[i].n_e)/(3 * m_e * m_e * (exp(w)-1));
+			//row[i].compton_emrate = (alpha * g_ae * g_ae * energy * energy * row[i].n_e * row[i].n_e)/(3 * m_e * m_e * (exp(row[i].w)-1));
+			row[i].compton_emrate = (alpha * g_ae * g_ae * energy * energy * row[i].n_e_keV * row[i].n_e_keV)/(3 * m_e_keV * m_e_keV * (exp(row[i].w)-1));
 			std::cout << "Compton emission rate for this row: " << row[i].compton_emrate << std::endl;
 
 			/*-------------------------------------- Debye screening scale ------------------------------------*/
 	
 			std::cout << "[INFO] Computing the Debye screening scale..." << std::endl; 
-			row[i].debye_scale = (4 * M_PI * alpha / row[i].temp) * (row[i].n_e + row[i].n_Z[0] + row[i].n_Z[1]);//making the same approximation as for n_e calculation 
+			//row[i].debye_scale = (4 * M_PI * alpha / row[i].temp) * (row[i].n_e + row[i].n_Z[0] + row[i].n_Z[1]);//making the same approximation as for n_e calculation 
+			row[i].debye_scale = std::sqrt( (4 * M_PI * alpha / row[i].temp_keV) * (row[i].n_e + row[i].n_Z[0] + 4*row[i].n_Z[1]) * 7.645e-24 );//making the same approximation as for n_e calculation 
+			row[i].y = row[i].debye_scale/(std::sqrt(2*m_e_keV*row[i].temp_keV));
 			std::cout << "Debye screening scale for this row: " << row[i].debye_scale << std::endl;
+			std::cout << "y for this row: " << row[i].y << std::endl;
 			
-			double y = row[i].debye_scale/(std::sqrt(2*m_e*row[i].temp));
 				
 			///*-------------------------------------- TODO: Integrals ------------------------------------*/
 			//
@@ -369,7 +379,9 @@ int SolarModel::AccessSolarModel() {
 			///*-------------------------------------- Bremsstrahlung emission rate ------------------------------------*/
 	
 			Integration GaussLag;
-			GaussLag.F(w,std::sqrt(2)*y);
+			GaussLag._w = row[i].w;
+			GaussLag._y = row[i].y;
+			GaussLag.F();
 
 			//std::cout << "[INFO] Computing the Bremsstrahlung emission rate..." << std::endl; 
 			//row[i].brems_emrate = alpha * alpha * g_ae * g_ae * (4/3) * std::sqrt(M_PI) * row[i].n_e * row[i].n_e * exp(-w) * GaussLag.F(w,std::sqrt(2)*y) / (std::sqrt(row[i].temp) * std::pow(m_e,3.5) * energy);
@@ -392,9 +404,10 @@ It is required in the computation of the Bremsstrahlung emission rate. It is an 
 integral in that the bounds of x are 0 and inf. It has been attempted here to solve this 
 https://rosettacode.org/wiki/Numerical_integration/Gauss-Legendre_Quadrature
 ----------------------------------------------------------------------------------------*/
-double Integration::F(double _w, double _y){
+double Integration::F(){
 
-	std::complex<double> Result(0,0);
+	//std::complex<double> Result(0,0);
+	double Result = 0.0;
 
 	//this->laguerreCoef();
 	
@@ -403,13 +416,15 @@ double Integration::F(double _w, double _y){
 	//	coef_arr.push_back(lcoef[N][i]);
 	//}
 	
-	std::vector<std::complex<double>> roots = this->laguerreRootsPy(coefficients);
+	//std::vector<std::complex<double>> roots = this->laguerreRootsPy(coefficients);
+	std::vector<double> roots = this->laguerreRootsPy(coefficients);
 
-	for(int i=1; i<=N; i++){
+	for(int i=0; i<N; i++){
 		Result += this->func(roots[i]);
+		std::cout << "Result: " << Result << std::endl;
 	}
 
-	std::cout << Result << std::endl;
+	std::cout << "Final result: " << Result << std::endl;
 
 	//std::vector<double> poly = {1.0, 2.0, 3.0, 4.0};
 	//std::cout << "Before call" << std::endl;
@@ -424,8 +439,28 @@ double Integration::F(double _w, double _y){
 
 }
  
-std::complex<double> Integration::func(std::complex<double> x){
-	return x*x;
+//std::complex<double> Integration::func(std::complex<double> x){ 
+double Integration::func(double x){ 
+	double up_lim = std::sqrt(x+this->_w) + std::sqrt(x);
+	double lo_lim = std::sqrt(x+this->_w) - std::sqrt(x);
+	std::cout << "w: " << this->_w << std::endl;
+	std::cout << "sqrt(x+w): " << std::sqrt(x+this->_w) << std::endl;
+	std::cout << "sqrt(x): " << std::sqrt(x) << std::endl;
+	std::cout << "i-th root: " << x << std::endl;
+	std::cout << "Upper limit: " << up_lim << std::endl;
+	std::cout << "Lower limit: " << lo_lim << std::endl;
+	std::cout << "first_integral(up_lim):  " << first_integral(up_lim) << std::endl;
+	std::cout << "first_integral(lo_lim):  " << first_integral(lo_lim) << std::endl;
+	std::cout << "f(x_i):  " << first_integral(up_lim) - first_integral(lo_lim) << std::endl;
+	std::cout << std::endl;
+
+	return first_integral(up_lim) - first_integral(lo_lim);	
+}
+
+
+double Integration::first_integral(double t){
+	double var_y = this->_y;
+	return (1./2.) * ( ((var_y*var_y) / (t*t + var_y*var_y)) + log( t*t + var_y*var_y ) );
 }
 
 
@@ -484,20 +519,23 @@ std::vector<double> Integration::laguerreCoef()
 //
 //}
 
-std::vector<std::complex<double>> Integration::laguerreRootsPy(std::vector<double> poly){
-    static py::scoped_interpreter guard{};
-    std::cout << "import numpy" << std::endl;
-    py::module np = py::module::import("numpy");
-    std::cout << "cast poly" << std::endl;
-    py::array_t<double> polyNumpy = py::cast(poly);
-    std::cout << "access roots" << std::endl;
-    py::object roots = np.attr("roots");
-    std::cout << "call roots" << std::endl;
-    py::object retVal = roots(polyNumpy);
-    std::cout << "echo result" << std::endl;
-    std::cout << retVal << std::endl;
+//std::vector<std::complex<double>> Integration::laguerreRootsPy(std::vector<double> poly){
+std::vector<double> Integration::laguerreRootsPy(std::vector<double> poly){
 
-    return retVal.cast<std::vector<std::complex<double>>>();
+	static py::scoped_interpreter guard{};
+	std::cout << "import numpy" << std::endl;
+	py::module np = py::module::import("numpy");
+	std::cout << "cast poly" << std::endl;
+	py::array_t<double> polyNumpy = py::cast(poly);
+	std::cout << "access roots" << std::endl;
+	py::object roots = np.attr("roots");
+	std::cout << "call roots" << std::endl;
+	py::object retVal = roots(polyNumpy);
+	std::cout << "echo result" << std::endl;
+	std::cout << retVal << std::endl;
+	
+	//return retVal.cast<std::vector<std::complex<double>>>();
+	return retVal.cast<std::vector<double>>();
 
 }
 
