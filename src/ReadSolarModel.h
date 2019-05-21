@@ -67,6 +67,8 @@ struct ROW {
 	double debye_scale = 0.0;
 	double w = 0.0; // w = \omega/T 
 	double y = 0.0; // y = (k_s)/sqrt(2*m_e*T)	 
+
+	double total_emrate = 0.0;
 };
 
 struct DISVAL { 
@@ -127,6 +129,7 @@ private:
 	const double m_e = 9.109e-28; //grams
 	const double m_e_keV = 510.998; //keV
 	const double g_ae = 1e-12;
+	const double e_charge = 1.;
 
 	//opacity files downloaded on 28 Jan 2019
 	std::vector<std::string> OpacityFiles= {
@@ -272,23 +275,50 @@ public:
 	//double ComptonEmissionRate(double, double, double);
 };
 
-class Integration{
-public:
-	int N = 5;
-	//double lcoef [][];
-	double _w = 0.0;
-	double _y = 0.0;
-public:
-	double F();
-	std::vector<double> laguerreCoef();
-	//std::vector<std::complex<double>> laguerreRootsPy(std::vector<double>);
-	std::vector<double> laguerreRootsPy(std::vector<double>);
-	//std::complex<double> func(std::complex<double>);
-	double func(double);
-	double first_integral(double);
-	double laguerreDeriv(int,double);
-	double laguerreEval(int,double);
-	double weight(int,double);
+//Base class
+class LagPoly {
+        public:
+                std::vector<double> coef();
+                std::vector<double> rootsPy(std::vector<double>);
+                double eval(int, double);
+                double deriv(int, double);
+		int N = 5;
+		std::vector<double> coeff_vec;
+		std::vector<double> roots_vec;
+		std::vector<double> weights_vec;
+
 };
+
+
+//Derived class
+class GaussLagQuad:LagPoly {
+	public:
+		double weight(double);
+		double inner_integral(double);
+		double func(double);
+		void computeWeightsAndRoots();
+		double F(double,double);
+		double w = 0.0;
+		double y = 0.0;
+};
+
+//class Integration{
+//public:
+//	int N = 5;
+//	//double lcoef [][];
+//	double _w = 0.0;
+//	double _y = 0.0;
+//public:
+//	double F();
+//	std::vector<double> laguerreCoef();
+//	//std::vector<std::complex<double>> laguerreRootsPy(std::vector<double>);
+//	std::vector<double> laguerreRootsPy(std::vector<double>);
+//	//std::complex<double> func(std::complex<double>);
+//	double func(double);
+//	double first_integral(double);
+//	double laguerreDeriv(int,double);
+//	double laguerreEval(int,double);
+//	double weight(int,double);
+//};
 #endif // READFILE_H
 

@@ -68,13 +68,21 @@ int SolarModel::AccessSolarModel() {
 	std::stringstream ss;
 	std::ofstream outfile1;
 	outfile1.open("../results/electron_densities.txt");
-        ss << std::setw(15) << std::left << "r [R_sun]" << std::setw(20) << std::left << "e #density [cm**-3]" << std::setw(20) << std::left << "e #density [eV**3]" << std::endl;
+        ss << std::setw(15) << std::left << "r [R_sun]";
+	ss << std::setw(20) << std::left << "e #density [cm**-3]";
+	ss << std::setw(20) << std::left << "e #density [keV**3]";
+	ss << std::setw(20) << std::left << "Compton_emrate []";
+	ss << std::setw(20) << std::left << "Debye scale";
+	ss << std::setw(25) << std::left << "Sum(Z(j)^2*n_j) [keV**3]";
+	ss << std::setw(20) << std::left << "Brems_emrate";
+	ss << std::setw(20) << std::left << "Total_emrate";
+	ss << std::endl;
 
 
         std::cout << "[INFO] Reading solar model file... " << std::endl;
 	//++lineNumber;
 
-        while(!solarmodel_file.eof() && lineNumber < 24) {
+        while(!solarmodel_file.eof() /*&& lineNumber < 24*/) {
 		std::getline(solarmodel_file, line);
                 std::istringstream iss_line(line);
                 if(line.find("#")==0 || line.empty()) {
@@ -89,6 +97,8 @@ int SolarModel::AccessSolarModel() {
 	
 			row[i].temp_keV	= row[i].temp * 8.621738e-8;
 	
+			ss << std::setw(15) << std::left << row[i].radius;
+
 			/*------------------------------------------------------------------------------------------------------------------
 			   The isotopes don't need to be summed up in order to make the comparison with the OP filenames and select an OP file
 			   because from the atomic weights mentioned in the OP tables, one can infer that they use the most abundant isotope.
@@ -347,14 +357,17 @@ int SolarModel::AccessSolarModel() {
 			std::cout << "Electron number density stored for this row: " << row[i].n_e << std::endl;
 			std::cout << "Electron number density stored for this row [keV]: " << row[i].n_e_keV << std::endl;
 
-			ss << std::setw(15) << std::left << row[i].radius << std::setw(20) << std::left << row[i].n_e << std::setw(20) << std::left << row[i].n_e_keV << std::endl;
+			ss << std::setw(20) << std::left << row[i].n_e;
+			ss << std::setw(20) << std::left << row[i].n_e_keV;
 	
 			/*-------------------------------------- Compton emission rate ------------------------------------*/
 
 			std::cout << "[INFO] Computing the Compton Emission Rate..." << std::endl;
 			//row[i].compton_emrate = (alpha * g_ae * g_ae * energy * energy * row[i].n_e * row[i].n_e)/(3 * m_e * m_e * (exp(row[i].w)-1));
-			row[i].compton_emrate = (alpha * g_ae * g_ae * energy * energy * row[i].n_e_keV * row[i].n_e_keV)/(3 * m_e_keV * m_e_keV * (exp(row[i].w)-1));
+			row[i].compton_emrate = (alpha * g_ae * g_ae * energy * energy * row[i].n_e_keV * row[i].n_e_keV)/(3 * m_e_keV * m_e_keV * (exp(row[i].w)-1.));
 			std::cout << "Compton emission rate for this row: " << row[i].compton_emrate << std::endl;
+
+			ss << std::setw(20) << std::left << row[i].compton_emrate;
 
 			/*-------------------------------------- Debye screening scale ------------------------------------*/
 	
@@ -365,28 +378,35 @@ int SolarModel::AccessSolarModel() {
 			std::cout << "Debye screening scale for this row: " << row[i].debye_scale << std::endl;
 			std::cout << "y for this row: " << row[i].y << std::endl;
 			
+			ss << std::setw(20) << std::left << row[i].debye_scale;
+			ss << std::setw(25) << std::left << (row[i].n_Z[0] + 4*row[i].n_Z[1]) * 7.645e-24;
 				
-			///*-------------------------------------- TODO: Integrals ------------------------------------*/
-			//
-			//double func1 = (t*t*t)/((t*t+y*y)*(t*t+y*y));
-			//double up1 = std::sqrt(x*x-w) + x;
-			//double low1 = std::sqrt(x*x-w) - x;
-			//double func2 = x*exp(-x*x)*Integrate(func1,low1,up1);
-			//double up2 = inf;
-			//double low2 = 0;
-			//double F = Integrate(func2,low2,up2);
-			//
-			///*-------------------------------------- Bremsstrahlung emission rate ------------------------------------*/
+			/*-------------------------------------- Bremsstrahlung emission rate ------------------------------------*/
 	
-			Integration GaussLag;
-			GaussLag._w = row[i].w;
-			GaussLag._y = row[i].y;
-			GaussLag.F();
+			//Integration GaussLag;
+			//GaussLag._w = row[i].w;
+			//GaussLag._y = std::sqrt(2)*row[i].y;
+			//GaussLag.F();
+			GaussLagQuad gauss;
 
-			//std::cout << "[INFO] Computing the Bremsstrahlung emission rate..." << std::endl; 
-			//row[i].brems_emrate = alpha * alpha * g_ae * g_ae * (4/3) * std::sqrt(M_PI) * row[i].n_e * row[i].n_e * exp(-w) * GaussLag.F(w,std::sqrt(2)*y) / (std::sqrt(row[i].temp) * std::pow(m_e,3.5) * energy);
-			//std::cout << "Bremsstrahlung emission rate for this row: " << row[i].brems_emrate << std::endl;
-			
+			std::cout << "[INFO] Computing the Bremsstrahlung emission rate..." << std::endl; 
+			row[i].brems_emrate = alpha * alpha * g_ae * g_ae * (4/3) * std::sqrt(M_PI) * row[i].n_e_keV * row[i].n_e_keV * exp(-row[i].w) * gauss.F(row[i].w,std::sqrt(2)*row[i].y) / (std::sqrt(row[i].temp_keV) * std::pow(m_e_keV,3.5) * energy);
+			std::cout << "Bremsstrahlung emission rate for this row: " << row[i].brems_emrate << std::endl;
+	
+			ss << std::setw(20) << std::left << row[i].brems_emrate;
+
+			/*----------------------------------- Total emission rate ----------------------------------*/
+
+			double term1 = (1./2.) * (g_ae * g_ae * energy * energy * row[i].abs_coeff) / (e_charge * e_charge * m_e_keV * m_e_keV * (exp(row[i].w)-1.)) ; // includes contribution from ff, fb and bb processes and a part of the Comption contribution
+			double term2 = (1./2.) * ((exp(row[i].w)-2) * row[i].compton_emrate) / (exp(row[i].w)-1.) ; // completes the Compton contribution
+			double term3 = row[i].brems_emrate; // contribution from ee-bremsstahlung
+			row[i].total_emrate = term1 + term2 + term3;
+			std::cout << "Term 1: " << term1 << std::endl;
+			std::cout << "Term 2: " << term2 << std::endl;
+			std::cout << "Term 3: " << term3 << std::endl;
+			std::cout << "Total emission rate for this row: " << row[i].total_emrate << std::endl;
+
+			ss << std::setw(20) << std::left << row[i].total_emrate << std::endl;
 
 			std::cout << std::endl;	
                         ++i;
@@ -398,150 +418,275 @@ int SolarModel::AccessSolarModel() {
 }
 
 
-/*----------------------------------------------------------------------------------------
-This function computes the integral as given in equation 2.16 in J. Redondo's paper.
-It is required in the computation of the Bremsstrahlung emission rate. It is an improper 
-integral in that the bounds of x are 0 and inf. It has been attempted here to solve this 
-https://rosettacode.org/wiki/Numerical_integration/Gauss-Legendre_Quadrature
-----------------------------------------------------------------------------------------*/
-double Integration::F(){
+///*----------------------------------------------------------------------------------------
+//This function computes the integral as given in equation 2.16 in J. Redondo's paper.
+//It is required in the computation of the Bremsstrahlung emission rate. It is an improper 
+//integral in that the bounds of x are 0 and inf. It has been attempted here to solve this 
+//https://rosettacode.org/wiki/Numerical_integration/Gauss-Legendre_Quadrature
+//----------------------------------------------------------------------------------------*/
+//double SolarModel::F(){
+//
+//	//std::complex<double> Result(0,0);
+//	double Result = 0.0;
+//
+//	//this->laguerreCoef();
+//	
+//	std::vector<double> coefficients = this->laguerreCoef();
+//	//for(int i=N; i>=0; i--){
+//	//	coef_arr.push_back(lcoef[N][i]);
+//	//}
+//	
+//	//std::vector<std::complex<double>> roots = this->laguerreRootsPy(coefficients);
+//	std::vector<double> roots = this->laguerreRootsPy(coefficients);
+//
+//	for(int i=0; i<N; i++){
+//		Result += this->func(roots[i]) * this->weight(N,roots[i]);
+//		std::cout << "w_i: " << this->weight(N,roots[i]) << std::endl;
+//		std::cout << "Result: " << Result << std::endl;
+//		std::cout << std::endl;
+//	}
+//
+//	Result *= (1./2.);
+//	std::cout << "Final result: " << Result << std::endl;
+//	return Result;
+//}
+// 
+/*---------------------------------------------------------------------------------------------------*/
+std::vector<double> LagPoly::coef() {
 
-	//std::complex<double> Result(0,0);
-	double Result = 0.0;
-
-	//this->laguerreCoef();
-	
-	std::vector<double> coefficients = this->laguerreCoef();
-	//for(int i=N; i>=0; i--){
-	//	coef_arr.push_back(lcoef[N][i]);
-	//}
-	
-	//std::vector<std::complex<double>> roots = this->laguerreRootsPy(coefficients);
-	std::vector<double> roots = this->laguerreRootsPy(coefficients);
-
-	for(int i=0; i<N; i++){
-		Result += this->func(roots[i]) * this->weight(N,roots[i]);
-		std::cout << "w_i: " << this->weight(N,roots[i]) << std::endl;
-		std::cout << "Result: " << Result << std::endl;
-		std::cout << std::endl;
-	}
-
-	std::cout << "Final result: " << Result << std::endl;
-
-}
- 
-
-std::vector<double> Integration::laguerreCoef()
-{
         //double lroots[N];
         //double weight[N];
-	std::vector<double> res_coef;
-        double lcoef[N + 1][N + 1] = {{0}};
+	std::cout << "N: " << N << std::endl;
+        std::vector<double> res_coef;
+        double lcoef[N + 1][N + 1] = {{0}}; // --> uncomment when on linux
+        //double lcoef[N + 1][N + 1];           // --> uncomment when on mac
+        //                                           std::memset(lcoef,0,sizeof lcoef); // --> uncomment when on mac
 
-	int n, i;
-	lcoef[0][0] = lcoef[1][0] = 1.; lcoef[1][1]  = -1.;//coeffs of the first two polynomials
-	for (n = 2; n <= N; n++) { //n-th polynomial
-		lcoef[n][0] = 1.; //constants of all Laguerre polynomials are = 1
-		for (i = 1; i <= n; i++) //i-th power of x in the n-th polynomial
-			lcoef[n][i] = ( (2*n-1)*lcoef[n-1][i] - lcoef[n-1][i-1] + (1-n)*lcoef[n-2][i] ) / n;
-	}
+        int n, i;
+        lcoef[0][0] = lcoef[1][0] = 1.; lcoef[1][1]  = -1.;//coeffs of the first two polynomials
+        for (n = 2; n <= N; n++) { //n-th polynomial
+                lcoef[n][0] = 1.; //constants of all Laguerre polynomials are = 1
+                for (i = 1; i <= n; i++) //i-th power of x in the n-th polynomial
+                        lcoef[n][i] = ( (2*n-1)*lcoef[n-1][i] - lcoef[n-1][i-1] + (1-n)*lcoef[n-2][i] ) / n;
+        }
 
-	/*      Uncomment the following 12 lines to display the coefficients of the Laguerre polynomials     */
-        
-	std::cout << "-------- Coefficients for i-th power (i-th column) of x in the n-th polynomial (n-th row) --------" << std::endl;
-	for(int b=0; b<=N; b++){
-		std::cout << "\t" << b ;
-	}
-	std::cout << std::endl;
-	for(int a=0; a<=N; a++){
-		std::cout << a << "\t";
+        /*      Uncomment the following 12 lines to display the coefficients of the Laguerre polynomials     */
+
+        std::cout << "-------- Coefficients for i-th power (i-th column) of x in the n-th polynomial (n-th row) --------" << std::endl;
+        for(int b=0; b<=N; b++){
+                std::cout << "\t" << b ;
+        }
+        std::cout << std::endl;
+        for(int a=0; a<=N; a++){
+                std::cout << a << "\t";
                 for(int b=0; b<=a; b++){
-                        std::cout << std::setprecision(3) << std::fixed << lcoef[a][b] << "\t";
+                        std::cout << std::setprecision(4) << std::fixed << lcoef[a][b] << "\t";
                 }
                 std::cout << std::endl;
         }
-	
-	//storing the coefficients of the N-th order polynomial only whose roots will be computed
+
+        //storing the coefficients of the N-th order polynomial only whose roots will be computed
         for(int i=N; i>=0; i--){
                 res_coef.push_back(lcoef[N][i]);
         }
 
-	return res_coef;
+        return res_coef;
 
 }
 
-//        std::cout << "val : " << val
-//std::vector<std::complex<double>> Integration::laguerreRootsPy(std::vector<double> poly){
-std::vector<double> Integration::laguerreRootsPy(std::vector<double> poly){
 
-	static py::scoped_interpreter guard{};
-	std::cout << "import numpy" << std::endl;
-	py::module np = py::module::import("numpy");
-	std::cout << "cast poly" << std::endl;
-	py::array_t<double> polyNumpy = py::cast(poly);
-	std::cout << "access roots" << std::endl;
-	py::object roots = np.attr("roots");
-	std::cout << "call roots" << std::endl;
-	py::object retVal = roots(polyNumpy);
-	std::cout << "echo result" << std::endl;
-	std::cout << retVal << std::endl;
+std::vector<double> LagPoly::rootsPy(std::vector<double> poly){
+
+        static py::scoped_interpreter guard{};
+        std::cout << "import numpy" << std::endl;
+        py::module np = py::module::import("numpy");
+        std::cout << "cast poly" << std::endl;
+        py::array_t<double> polyNumpy = py::cast(poly);
+        std::cout << "access roots" << std::endl;
+        py::object roots = np.attr("roots");
+        std::cout << "call roots" << std::endl;
+        py::object retVal = roots(polyNumpy);
+        std::cout << "echo result" << std::endl;
+        std::cout << retVal << std::endl;
+
+        //return retVal.cast<std::vector<std::complex<double>>>();
+        return retVal.cast<std::vector<double>>();
+
+}
+
+
+
+double LagPoly::eval(int n, double x){
+        if(n>0)
+                return (2*n-1-x)*LagPoly::eval(n-1,x) - (1.-(1./n))*LagPoly::eval(n-2,x);
+        if(n==1)
+                return 1.-x;
+        if(n==0)
+                return 1.;
+}
+
+double LagPoly::deriv(int m, double x){
+        if(m>0)
+                return LagPoly::deriv(m-1,x) - LagPoly::eval(m-1,x);
+        if(m==0)
+                return 0.; 
+}
+
+double GaussLagQuad::weight(double x){
+        return 1./(x * pow(LagPoly::deriv(N,x),2) );
+}
+
+double GaussLagQuad::inner_integral(double t){
+        return (1./2.) * ( ((y*y) / (t*t + y*y)) + log( t*t + y*y ) );
+} 
+
+double GaussLagQuad::func(double x){
+	double up_lim = std::sqrt(x+w) + std::sqrt(x);
+	double lo_lim = std::sqrt(x+w) - std::sqrt(x);
+	return inner_integral(up_lim) - inner_integral(lo_lim);
+}
+
+double GaussLagQuad::F(double _w, double _y){
+
+        double result = 0.0;
+	LagPoly lagpoly;
+	GaussLagQuad glquad;
+	glquad.w = _w;
+	glquad.y = _y;
 	
-	//return retVal.cast<std::vector<std::complex<double>>>();
-	return retVal.cast<std::vector<double>>();
+	std::vector<double> coeff_vec = lagpoly.coef();
+        std::vector<double> roots_vec = lagpoly.rootsPy(coeff_vec);
+	std::vector<double> weights_vec;
 
+	for(int i=0; i<lagpoly.N; i++){
+		weights_vec.push_back(glquad.weight(roots_vec[i]));
+	}
+	for(int i=0; i<lagpoly.N; i++){
+		result += weights_vec[i] * glquad.func(roots_vec[i]);
+	}
+	result *= (1./2.);
+	std::cout << "[INFO] F(w,sqrt(2)*y) for this row: " << result << std::endl;
+	return result;
 }
 
 
-//std::complex<double> Integration::func(std::complex<double> x){ 
-double Integration::func(double x){
-        double up_lim = std::sqrt(x+this->_w) + std::sqrt(x);
-        double lo_lim = std::sqrt(x+this->_w) - std::sqrt(x);
-        std::cout << "w: " << this->_w << std::endl;
-        std::cout << "sqrt(x+w): " << std::sqrt(x+this->_w) << std::endl;
-        std::cout << "sqrt(x): " << std::sqrt(x) << std::endl;
-        std::cout << "i-th root: " << x << std::endl;
-        std::cout << "Upper limit: " << up_lim << std::endl;
-        std::cout << "Lower limit: " << lo_lim << std::endl;
-        std::cout << "first_integral(up_lim):  " << first_integral(up_lim) << std::endl;
-        std::cout << "first_integral(lo_lim):  " << first_integral(lo_lim) << std::endl;
-        std::cout << "f(x_i):  " << first_integral(up_lim) - first_integral(lo_lim) << std::endl;
 
-        return first_integral(up_lim) - first_integral(lo_lim);
-}
+/*---------------------------------------------------------------------------------------------------*/
 
 
-double Integration::first_integral(double t){
-        double var_y = this->_y;
-        return (1./2.) * ( ((var_y*var_y) / (t*t + var_y*var_y)) + log( t*t + var_y*var_y ) );
-}
-
-
-double Integration::laguerreDeriv(int n, double x){
-	if(n>0)
-		return laguerreDeriv(n-1,x) - laguerreEval(n-1,x);
-	if(n==0)
-		return 0.;
-}
-
-double Integration::laguerreEval(int n, double x){
-	if(n>0)
-		return (2*n-1-x)*laguerreEval(n-1,x) - (1.-(1./n))*laguerreEval(n-2,x);
-	if(n==1)
-		return 1-x;
-	if(n==0)
-		return 1;
-}
-
-//int Integration::factorial(int n){
+//std::vector<double> Integration::laguerreCoef()
+//{
+//        //double lroots[N];
+//        //double weight[N];
+//	std::vector<double> res_coef;
+//        double lcoef[N + 1][N + 1] = {{0}}; // --> uncomment when on linux
+//        //double lcoef[N + 1][N + 1];		// --> uncomment when on mac
+//        //                                           std::memset(lcoef,0,sizeof lcoef);	// --> uncomment when on mac
+//
+//	int n, i;
+//	lcoef[0][0] = lcoef[1][0] = 1.; lcoef[1][1]  = -1.;//coeffs of the first two polynomials
+//	for (n = 2; n <= N; n++) { //n-th polynomial
+//		lcoef[n][0] = 1.; //constants of all Laguerre polynomials are = 1
+//		for (i = 1; i <= n; i++) //i-th power of x in the n-th polynomial
+//			lcoef[n][i] = ( (2*n-1)*lcoef[n-1][i] - lcoef[n-1][i-1] + (1-n)*lcoef[n-2][i] ) / n;
+//	}
+//
+//	/*      Uncomment the following 12 lines to display the coefficients of the Laguerre polynomials     */
+//        
+//	std::cout << "-------- Coefficients for i-th power (i-th column) of x in the n-th polynomial (n-th row) --------" << std::endl;
+//	for(int b=0; b<=N; b++){
+//		std::cout << "\t" << b ;
+//	}
+//	std::cout << std::endl;
+//	for(int a=0; a<=N; a++){
+//		std::cout << a << "\t";
+//                for(int b=0; b<=a; b++){
+//                        std::cout << std::setprecision(4) << std::fixed << lcoef[a][b] << "\t";
+//                }
+//                std::cout << std::endl;
+//        }
+//	
+//	//storing the coefficients of the N-th order polynomial only whose roots will be computed
+//        for(int i=N; i>=0; i--){
+//                res_coef.push_back(lcoef[N][i]);
+//        }
+//
+//	return res_coef;
+//
+//}
+//
+////        std::cout << "val : " << val
+////std::vector<std::complex<double>> Integration::laguerreRootsPy(std::vector<double> poly){
+//std::vector<double> Integration::laguerreRootsPy(std::vector<double> poly){
+//
+//	static py::scoped_interpreter guard{};
+//	std::cout << "import numpy" << std::endl;
+//	py::module np = py::module::import("numpy");
+//	std::cout << "cast poly" << std::endl;
+//	py::array_t<double> polyNumpy = py::cast(poly);
+//	std::cout << "access roots" << std::endl;
+//	py::object roots = np.attr("roots");
+//	std::cout << "call roots" << std::endl;
+//	py::object retVal = roots(polyNumpy);
+//	std::cout << "echo result" << std::endl;
+//	std::cout << retVal << std::endl;
+//	
+//	//return retVal.cast<std::vector<std::complex<double>>>();
+//	return retVal.cast<std::vector<double>>();
+//
+//}
+//
+//
+////std::complex<double> Integration::func(std::complex<double> x){ 
+//double Integration::func(double x){
+//        double up_lim = std::sqrt(x+this->_w) + std::sqrt(x);
+//        double lo_lim = std::sqrt(x+this->_w) - std::sqrt(x);
+//        std::cout << "w: " << this->_w << std::endl;
+//        std::cout << "sqrt(x+w): " << std::sqrt(x+this->_w) << std::endl;
+//        std::cout << "sqrt(x): " << std::sqrt(x) << std::endl;
+//        std::cout << "i-th root: " << x << std::endl;
+//        std::cout << "Upper limit: " << up_lim << std::endl;
+//        std::cout << "Lower limit: " << lo_lim << std::endl;
+//        std::cout << "first_integral(up_lim):  " << first_integral(up_lim) << std::endl;
+//        std::cout << "first_integral(lo_lim):  " << first_integral(lo_lim) << std::endl;
+//        std::cout << "f(x_i):  " << first_integral(up_lim) - first_integral(lo_lim) << std::endl;
+//
+//        return first_integral(up_lim) - first_integral(lo_lim);
+//}
+//
+//
+//double Integration::first_integral(double t){
+//        double var_y = this->_y;
+//        return (1./2.) * ( ((var_y*var_y) / (t*t + var_y*var_y)) + log( t*t + var_y*var_y ) );
+//}
+//
+//
+//double Integration::laguerreDeriv(int n, double x){
 //	if(n>0)
-//		return n * factorial(n-1);
+//		return laguerreDeriv(n-1,x) - laguerreEval(n-1,x);
+//	if(n==0)
+//		return 0.;
+//}
+//
+//double Integration::laguerreEval(int n, double x){
+//	if(n>0)
+//		return (2*n-1-x)*laguerreEval(n-1,x) - (1.-(1./n))*laguerreEval(n-2,x);
+//	if(n==1)
+//		return 1-x;
 //	if(n==0)
 //		return 1;
 //}
-
-double Integration::weight(int n, double x){
-	return 1./(x * pow(laguerreDeriv(n,x),2) );
-}
+//
+////int Integration::factorial(int n){
+////	if(n>0)
+////		return n * factorial(n-1);
+////	if(n==0)
+////		return 1;
+////}
+//
+//double Integration::weight(int n, double x){
+//	return 1./(x * pow(laguerreDeriv(n,x),2) );
+//}
 
 /*----------------------------------------------------------------------------------------
 This function reads all the opacity filenames, extracts the metal mass fractions from them
@@ -598,7 +743,7 @@ void SolarModel::ReadOpacityFileName(){
 			X_Z_metal.push_back(cooz);
 			X_Z_metal_numeric.push_back(std::stod(cooz));
 
-			start_pos = end_pos + 1;	
+		 	start_pos = end_pos + 1;	
 			possible_end_pos = name.find("-",start_pos+1);
 			//std::cout << "[DEBUG] " << "possible_end_pos:  " << possible_end_pos << std::endl;
 
