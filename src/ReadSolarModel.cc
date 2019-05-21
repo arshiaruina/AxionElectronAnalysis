@@ -75,6 +75,8 @@ int SolarModel::AccessSolarModel() {
 	ss << std::setw(20) << std::left << "Debye scale";
 	ss << std::setw(25) << std::left << "Sum(Z(j)^2*n_j) [keV**3]";
 	ss << std::setw(20) << std::left << "Brems_emrate";
+	ss << std::setw(20) << std::left << "S_e";
+	ss << std::setw(20) << std::left << "S_z";
 	ss << std::setw(20) << std::left << "Total_emrate";
 	ss << std::endl;
 
@@ -82,7 +84,7 @@ int SolarModel::AccessSolarModel() {
         std::cout << "[INFO] Reading solar model file... " << std::endl;
 	//++lineNumber;
 
-        while(!solarmodel_file.eof() /*&& lineNumber < 24*/) {
+        while(!solarmodel_file.eof() && lineNumber < 26) {
 		std::getline(solarmodel_file, line);
                 std::istringstream iss_line(line);
                 if(line.find("#")==0 || line.empty()) {
@@ -391,9 +393,16 @@ int SolarModel::AccessSolarModel() {
 
 			std::cout << "[INFO] Computing the Bremsstrahlung emission rate..." << std::endl; 
 			row[i].brems_emrate = alpha * alpha * g_ae * g_ae * (4/3) * std::sqrt(M_PI) * row[i].n_e_keV * row[i].n_e_keV * exp(-row[i].w) * gauss.F(row[i].w,std::sqrt(2)*row[i].y) / (std::sqrt(row[i].temp_keV) * std::pow(m_e_keV,3.5) * energy);
-			std::cout << "Bremsstrahlung emission rate for this row: " << row[i].brems_emrate << std::endl;
-	
 			ss << std::setw(20) << std::left << row[i].brems_emrate;
+			std::cout << "Bremsstrahlung emission rate for this row: " << row[i].brems_emrate << std::endl;
+			
+			//to compare values with those of M. Giannotti
+			row[i].Se = alpha * alpha * (4/3) * std::sqrt(M_PI) * row[i].n_e_keV * row[i].n_e_keV / (std::sqrt(row[i].temp_keV) * std::pow(m_e_keV,3.5));
+			ss << std::setw(20) << std::left << row[i].Se;
+
+			row[i].Sz = alpha * alpha * (4/3) * std::sqrt(2*M_PI) * row[i].n_e_keV * (row[i].n_Z[0] + 4*row[i].n_Z[1]) * 7.645e-24 / (std::sqrt(row[i].temp_keV) * std::pow(m_e_keV,3.5));
+			ss << std::setw(20) << std::left << row[i].Sz;
+				
 
 			/*----------------------------------- Total emission rate ----------------------------------*/
 

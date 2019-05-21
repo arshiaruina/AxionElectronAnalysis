@@ -69,6 +69,8 @@ struct ROW {
 	double y = 0.0; // y = (k_s)/sqrt(2*m_e*T)	 
 
 	double total_emrate = 0.0;
+	double Se = 0.0;
+	double Sz = 0.0;
 };
 
 struct DISVAL { 
