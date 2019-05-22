@@ -40,6 +40,26 @@ bool SortDistances(DISVAL& v1, DISVAL& v2){
 	return (v1.dist < v2.dist);
 }
 
+double TempTokeV(double temp){
+	/*
+		E = k_B * T
+		The conversion factor is nothing but the value
+		of the Boltzmann constant in units of [keV/K].
+		Value of k_B taken from PDG 2018.
+	*/
+	return temp*8.617e-8;
+}
+
+double DensityTokeV3(double dens){
+	/* 
+		h_bar*c = 197.326 [MeV*fm]
+		which gives a relation between length and electronvolts
+		1 [cm**-3] = 7.683e-24 [keV**3]
+		Value of h_bar*c taken from PDG 2018.
+	*/
+	return dens*7.683e-24;
+}
+
 //double SolarModel::AccessOpacityFile(std::string s, std::string H, std::string He, std::string R, std::string T);
 
 /*--------------------------------------------------------------------------------------------------------
@@ -80,7 +100,6 @@ int SolarModel::AccessSolarModel() {
 	ss << std::setw(20) << std::left << "Total_emrate";
 	ss << std::endl;
 
-
         std::cout << "[INFO] Reading solar model file... " << std::endl;
 	//++lineNumber;
 
@@ -97,7 +116,7 @@ int SolarModel::AccessSolarModel() {
 			//TODO--> Make this efficient!
 			iss_line >> row[i].massFrac >> row[i].radius >> row[i].temp >> row[i].density >> row[i].pressure >> row[i].lumiFrac >> row[i].H_massFrac >> row[i].He4_massFrac >> row[i].He3_massFrac >> row[i].C12_massFrac >> row[i].C13_massFrac >> row[i].N14_massFrac >> row[i].N15_massFrac >> row[i].O16_massFrac >> row[i].O17_massFrac >> row[i].O18_massFrac >> row[i].Ne_massFrac >> row[i].Na_massFrac >> row[i].Mg_massFrac >> row[i].Al_massFrac >> row[i].Si_massFrac >> row[i].P_massFrac >> row[i].S_massFrac >> row[i].Cl_massFrac >> row[i].Ar_massFrac >> row[i].K_massFrac >> row[i].Ca_massFrac >> row[i].Sc_massFrac >> row[i].Ti_massFrac >> row[i].V_massFrac >> row[i].Cr_massFrac >> row[i].Mn_massFrac >> row[i].Fe_massFrac >> row[i].Co_massFrac >> row[i].Ni_massFrac;
 	
-			row[i].temp_keV	= row[i].temp * 8.621738e-8;
+			row[i].temp_keV	= TempTokeV(row[i].temp);
 	
 			ss << std::setw(15) << std::left << row[i].radius;
 
@@ -159,7 +178,7 @@ int SolarModel::AccessSolarModel() {
 	
                         std::cout << "[INFO] Choosing the closest opacity file... " << std::endl;
 			std::vector<DISVAL> OpFileDistVec;
-			for(int j=0; j < OpacityFiles.size(); j++) { 
+			for(unsigned int j=0; j < OpacityFiles.size(); j++) { 
 				OpFileDistVec.push_back(DISVAL());
 				OpFileDistVec.back().index = j;
 				double d = 0.0;
@@ -206,7 +225,7 @@ int SolarModel::AccessSolarModel() {
                         std::cout << "[INFO] H mass fraction found to be closest: " << H_massFrac_inOPfiles[SelectedHandHemassFrac] << std::endl;
                         std::cout << "[INFO] He mass fraction found to be closest: " << He_massFrac_inOPfiles[SelectedHandHemassFrac] << std::endl;
 
-			////--------------------------------------------------------------------------------//
+ 			////--------------------------------------------------------------------------------//
                         //std::cout << "[INFO] H mass fraction of this row: " << row[i].H_massFrac << std::endl;
                         //std::cout << "[INFO] Choosing the closest H mass fraction... " << std::endl;
 			//std::vector<DISVAL> H_massFrac_distVec;
@@ -248,7 +267,7 @@ int SolarModel::AccessSolarModel() {
                         std::cout << "[INFO] log R value of this row: " << var << std::endl;
                         std::cout << "[INFO] Choosing the closest log R value... " << std::endl;
 			std::vector<DISVAL> logR_distVec;
-			for(int j=0; j < logR.size(); j++) { //logR.size() = 18
+			for(unsigned int j=0; j < logR.size(); j++) { //logR.size() = 18
 				/* x stores the density in a form that makes is comparable to how it is defined
 				in the opacity tables: x = log R = log( row[i].density / (row[i].temp * 10e-6) ) */ 
 				//double d = SquaredDistance(x,logR[j]);	
@@ -270,7 +289,7 @@ int SolarModel::AccessSolarModel() {
                         std::cout << "[INFO] log T value of this row: " << std::log10(row[i].temp) << std::endl;
                         std::cout << "[INFO] Choosing the closest log T value... " << std::endl;
 			std::vector<DISVAL> logT_distVec;
-			for(int j=0; j < logT.size(); j++) { //logT.size() = 70
+			for(int unsigned j=0; j < logT.size(); j++) { //logT.size() = 70
 				//double d = SquaredDistance(std::log(row[i].temp),logT[j]);
 				logT_distVec.push_back(DISVAL());	
 				//logT_distVec.back().dist = std::sqrt(d);	
@@ -303,7 +322,7 @@ int SolarModel::AccessSolarModel() {
 			
 			/*-------------------------------------- Number density ------------------------------------*/
 		
-			std::cout << "Number densities n_Z being computed..." << std::endl;
+			std::cout << "[INFO] Number densities n_Z being computed..." << std::endl;
 			for(int j=0; j<29; j++)
 				row[i].n_Z.push_back(0.0);
 			//TODO--> Make this efficient!
@@ -337,6 +356,11 @@ int SolarModel::AccessSolarModel() {
 			row[i].n_Z[27] = (row[i].Co_massFrac / atomic_mass[27]) * (row[i].density / amu);
 			row[i].n_Z[28] = (row[i].Ni_massFrac / atomic_mass[28]) * (row[i].density / amu);
 
+			std::cout << "[INFO] Number densities converted to units of keV**3" << std::endl;
+			for(int j=0; j<29; j++)
+				row[i].n_Z_keV3.push_back(DensityTokeV3(row[i].n_Z[j]));
+			
+
 			double energy = 3.;//keV //random value just for the time being. TODO: Put in the actual vector of energy values!
 			row[i].w = energy/(row[i].temp_keV); //temp in keV;
 			std::cout << "w for this row: " << row[i].w << std::endl;
@@ -355,7 +379,8 @@ int SolarModel::AccessSolarModel() {
 
 			std::cout << "[INFO] Computing the electron number density..." << std::endl;
 			row[i].n_e = (row[i].density/amu) * (1+row[i].H_massFrac)/2;
-			row[i].n_e_keV = row[i].n_e * 7.645e-24;
+			//row[i].n_e_keV = row[i].n_e * 7.645e-24;
+			row[i].n_e_keV = DensityTokeV3(row[i].n_e);
 			std::cout << "Electron number density stored for this row: " << row[i].n_e << std::endl;
 			std::cout << "Electron number density stored for this row [keV]: " << row[i].n_e_keV << std::endl;
 
@@ -396,11 +421,14 @@ int SolarModel::AccessSolarModel() {
 			ss << std::setw(20) << std::left << row[i].brems_emrate;
 			std::cout << "Bremsstrahlung emission rate for this row: " << row[i].brems_emrate << std::endl;
 			
-			//to compare values with those of M. Giannotti
-			row[i].Se = alpha * alpha * (4/3) * std::sqrt(M_PI) * row[i].n_e_keV * row[i].n_e_keV / (std::sqrt(row[i].temp_keV) * std::pow(m_e_keV,3.5));
+			/*----------------------------- to compare values with those of M. Giannotti ---------------------------*/
+	
+			row[i].Se = (alpha * alpha * (4./3.) * std::sqrt(M_PI) * row[i].n_e_keV * row[i].n_e_keV) / (std::sqrt(row[i].temp_keV) * std::pow(m_e_keV,3.5));
+			//row[i].Se = 1.422e-10 * (pow(470.8,2)) / (std::sqrt(row[i].temp_keV));
 			ss << std::setw(20) << std::left << row[i].Se;
 
-			row[i].Sz = alpha * alpha * (4/3) * std::sqrt(2*M_PI) * row[i].n_e_keV * (row[i].n_Z[0] + 4*row[i].n_Z[1]) * 7.645e-24 / (std::sqrt(row[i].temp_keV) * std::pow(m_e_keV,3.5));
+			row[i].Sz = (alpha * alpha * (4./3.) * std::sqrt(2.*M_PI) * row[i].n_e_keV * (row[i].n_Z[0] + 4*row[i].n_Z[1]) * 7.683e-24) / (std::sqrt(row[i].temp_keV) * std::pow(m_e_keV,3.5));
+			//row[i].Sz = (alpha * alpha * (4./3.) * std::sqrt(2*3.142)) / (std::pow(510.998,3.5));
 			ss << std::setw(20) << std::left << row[i].Sz;
 				
 
@@ -424,6 +452,7 @@ int SolarModel::AccessSolarModel() {
 	}
 	outfile1 << ss.str() << std::endl;
 	outfile1.close();
+	return 0;
 }
 
 
@@ -532,6 +561,7 @@ double LagPoly::eval(int n, double x){
                 return 1.-x;
         if(n==0)
                 return 1.;
+	return 0;
 }
 
 double LagPoly::deriv(int m, double x){
@@ -539,6 +569,7 @@ double LagPoly::deriv(int m, double x){
                 return LagPoly::deriv(m-1,x) - LagPoly::eval(m-1,x);
         if(m==0)
                 return 0.; 
+	return 0;
 }
 
 double GaussLagQuad::weight(double x){
@@ -705,11 +736,12 @@ The opacity filenames are stored in a global vector called OpacityFiles.
 ----------------------------------------------------------------------------------------*/
 void SolarModel::ReadOpacityFileName(){
 
-	for(int i=0; i < OpacityFiles.size(); i++) {
+	for(unsigned int i=0; i < OpacityFiles.size(); i++) {
 	//for(int i=0; i < 20; i++)  {
 		//std::vector<std::string> X_Z;
 		std::cout << "Reading filename: " << OpacityFiles[i] << std::endl;
-		sthttp://www.cplusplus.com/forum/beginner/68340/d::string name = OpacityFiles[i];	
+		//std::string name = OpacityFiles[i];	
+		//http://www.cplusplus.com/forum/beginner/68340/d::string name = OpacityFiles[i];	
 
 		//XZ_VecForOpFile.push_back(std::vector<std::string>);
 		std::vector<std::string> X_Z_metal;
@@ -787,7 +819,7 @@ void SolarModel::ReadOpacityFileName(){
 	std::cout << "OpacityFiles.size() = " << OpacityFiles.size() << std::endl; 
 	std::cout << "XZ_VecForOpFile.size() = " << XZ_VecForOpFile.size() << std::endl; 
 
-	for(int i=0; i < OpacityFiles.size(); i++) {
+	for(unsigned int i=0; i < OpacityFiles.size(); i++) {
 	//for(int i=0; i < 20; i++) {
 		std::cout << "File: " << OpacityFiles[i] << std::endl;
 		for(int j=0; j < 15; j++) {
@@ -835,8 +867,8 @@ double SolarModel::AccessOpacityFile(int s, int HandHe, int R, int T) {
 
         int lineNumber = 0;
 	int startTable_lineNumber = 0;                                
-        int posX = 0;
-        int posY = 0;
+        //int posX = 0;
+        //int posY = 0;
 	std::string tableIndex;
 	std::string selected_tableIndex;
 	//std::vector<std::string> tableIndex;
@@ -956,11 +988,11 @@ double SolarModel::AccessOpacityFile(int s, int HandHe, int R, int T) {
 						return std::stod(opacity_xsec);
 					}
 				}
-                                else { // 2.b) if inside a table we don't want to access
+                                else { continue;// 2.b) if inside a table we don't want to access
                                        //std::cout << "DEBUG: inside a table we don't want to access" << std::endl;
                                 }
 			}			
 		}
 	}
+	return 0;
 }
-

@@ -61,6 +61,7 @@ struct ROW {
 	
 	// vector of number densities of the elements corresponding to those given in the OP tables and unique for each layer of the sun as described in the solar model 
 	std::vector<double> n_Z;
+	std::vector<double> n_Z_keV3;
 
 	double compton_emrate = 0.0;
 	double brems_emrate = 0.0;
@@ -265,7 +266,7 @@ private:
  
 	};
 public:
-    	int ReadAndStoreTable();
+	int ReadAndStoreTable();
         int MetalMassFraction();
 	void ReadOpacityFileName();
 	int GetTableIndex();
