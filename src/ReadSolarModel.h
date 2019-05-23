@@ -82,15 +82,16 @@ struct DISVAL {
 
 class SolarModel{
 private:
-	std::vector<ROW> row;
-	//std::vector<OPACITYFILE_CONTENTS> opacityfile_contents;
-	//std::vector<std::string> OpacityFiles;
+	//std::vector<ROW> row;
+	////std::vector<OPACITYFILE_CONTENTS> opacityfile_contents;
+	////std::vector<std::string> OpacityFiles;
+	std::vector<double> energy_vec;
 	std::vector<std::vector<std::string>> XZ_VecForOpFile;
 	std::vector<std::vector<double>> XZ_VecForOpFile_numeric;
-    	std::string solarmodel_filename = "../resources/AGSS09_solar_model.dat";
-    	std::string line;
-	//std::string op_line;
-    	std::ifstream solarmodel_file;
+    	//std::string solarmodel_filename = "../resources/AGSS09_solar_model.dat";
+    	//std::string line;
+	////std::string op_line;
+    	//std::ifstream solarmodel_file;
 	//std::ifstream opacity_file;
         //std::istringstream iss_line;
 	
@@ -266,6 +267,7 @@ private:
  
 	};
 public:
+	int ReadEnergyValues();
 	int ReadAndStoreTable();
         int MetalMassFraction();
 	void ReadOpacityFileName();

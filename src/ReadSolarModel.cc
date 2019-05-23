@@ -23,8 +23,9 @@ int main(){
 	SolarModel f;
 	//f.ReadAndStoreSolarModel(); 
 	//f.MetalMassFraction();
-	f.ReadOpacityFileName();
-    	f.AccessSolarModel();
+	f.ReadEnergyValues();
+	//f.ReadOpacityFileName();
+    	//f.AccessSolarModel();
 	return 0;
 }
 
@@ -60,6 +61,38 @@ double DensityTokeV3(double dens){
 	return dens*7.683e-24;
 }
 
+int SolarModel::ReadEnergyValues(){
+
+	int i = 0;
+        std::string energy_filename = "../resources/axion_gae_flux.dat";
+        std::string line;
+        std::ifstream energy_file;
+
+	energy_file.open(energy_filename.c_str());
+
+        if(!energy_file.good()){
+                std::cout << "Problem with energy file!" << std::endl;
+                return 1;
+        }
+
+        std::cout << "[INFO] Reading and storing energy values... " << std::endl;
+
+        while(!energy_file.eof()) {
+                std::getline(energy_file, line);
+                std::istringstream iss_line(line);
+                if(line.find("#")==0 || line.empty()) {
+                        continue;
+                }
+                else {
+                	energy_vec.push_back(0.0);
+			iss_line >> energy_vec[i];
+			++i;
+		}
+	}
+	std::cout << energy_vec[i-2] << std::endl;
+	return 0;
+}
+
 //double SolarModel::AccessOpacityFile(std::string s, std::string H, std::string He, std::string R, std::string T);
 
 /*--------------------------------------------------------------------------------------------------------
@@ -76,6 +109,10 @@ int SolarModel::AccessSolarModel() {
 	double non_metal_massFrac = 1.0;
 	double metal_massFrac_actual = 0.0;
 	double metal_massFrac = 0.0;
+        std::vector<ROW> row;
+        std::string solarmodel_filename = "../resources/AGSS09_solar_model.dat";
+        std::string line;
+        std::ifstream solarmodel_file;
 
 	solarmodel_file.open(solarmodel_filename.c_str());
 
@@ -735,6 +772,7 @@ a vector of the mass fractions corresponding to the opacity file denoted by its 
 The opacity filenames are stored in a global vector called OpacityFiles. 
 ----------------------------------------------------------------------------------------*/
 void SolarModel::ReadOpacityFileName(){
+
 
 	for(unsigned int i=0; i < OpacityFiles.size(); i++) {
 	//for(int i=0; i < 20; i++)  {
