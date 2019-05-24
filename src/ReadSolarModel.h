@@ -82,7 +82,7 @@ struct DISVAL {
 
 class SolarModel{
 private:
-	//std::vector<ROW> row;
+	std::vector<ROW> row;
 	////std::vector<OPACITYFILE_CONTENTS> opacityfile_contents;
 	////std::vector<std::string> OpacityFiles;
 	std::vector<double> energy_vec;
@@ -100,8 +100,12 @@ private:
 	std::vector<double> logR = {-8.0,-7.5,-7.0,-6.5,-6.0,-5.5,-5.0,-4.5,-4.0,-3.5,-3.0,-2.5,-2.0,-1.5,-1.0,-0.5,0.0,0.5,1.0};
 	std::vector<double> logT = {3.75,3.80,3.85,3.90,3.95,4.00,4.05,4.10,4.15,4.20,4.25,4.30,4.35,4.40,4.45,4.50,4.55,4.60,4.65,4.70,4.75,4.80,4.85,4.90,4.95,5.00,5.05,5.10,5.15,5.20,5.25,5.30,5.35,5.40,5.45,5.50,5.55,5.60,5.65,5.70,5.75,5.80,5.85,5.90,5.95,6.00,6.10,6.20,6.30,6.40,6.50,6.60,6.70,6.80,6.90,7.00,7.10,7.20,7.30,7.40,7.50,7.60,7.70,7.80,7.90,8.00,8.10,8.30,8.50,8.70};
 	
-	//Standard Atomic Weights 2017 from http://www.ciaaw.org/atomic-weights.htm (accessed on 12.03.2019)
-	//Where applicable, values have been truncated upto 4 decimal places.
+	/* 
+		Standard Atomic Weights 2017 from http://www.ciaaw.org/atomic-weights.htm (accessed on 12.03.2019)
+		Where applicable, values have been truncated upto 4 decimal places.
+		* standard atomic weight
+		** middle of range of standard atomic weight
+	*/
 	std::vector<double> atomic_mass = {1.0078,4.0026,3.0160,//H, He4, He3
 					12.0000,13.0033, //C12, C13
 					14.0030,15.0001, //N14, N15
@@ -125,9 +129,9 @@ private:
 					55.845, //Fe *
 					58.9331,//Co *
 					58.6934 //Ni *
-	};	
-	// * standard atomic weight
-	// ** middle of range of standard atomic weight
+	};
+	
+	/*------- Constants -------*/
 	const double amu = 1.6605e-24; //grams
 	const double alpha = 1.0/137.0;
 	const double m_e = 9.109e-28; //grams
@@ -135,7 +139,7 @@ private:
 	const double g_ae = 1e-12;
 	const double e_charge = 1.;
 
-	//opacity files downloaded on 28 Jan 2019
+	/* --- Opacity files downloaded on 28 Jan 2019 --- */
 	std::vector<std::string> OpacityFiles= {
 		"../resources/opacity_tables/OP17.0.0-0.0-0.560994-0.376801-0.021178-0.03366-0.005376-0.001992-0.0-0.0-0.0-0.0-0.0-0.0-0.0.stored",
 		"../resources/opacity_tables/OP17.0.0-0.0-0.771903-0.137266-0.002442-0.043408-0.003528-0.041454-0.0-0.0-0.0-0.0-0.0-0.0-0.0.stored",
@@ -259,7 +263,7 @@ private:
 		"../resources/opacity_tables/OP17.0.314592-0.056186-0.456703-0.081214-0.001445-0.025683-0.002087-0.024526-0.010952-0.001825-0.001604-3.9E-4-2.29E-4-0.021362-0.001201.stored", 
 		"../resources/opacity_tables/OP17.0.325857-0.081852-0.419786-0.07465-0.002104-0.023606-0.003041-0.022544-0.010198-0.001747-0.001523-5.36E-4-3.33E-4-0.031119-0.001104.stored", 
 		"../resources/opacity_tables/OP17.0.333333-0.333333-0.333333-0.0-0.0-0.0-0.0-0.0-0.0-0.0-0.0-0.0-0.0-0.0-0.0.stored", 
-		"../resources/opacity_tables/OP17.0.346052-0.061805-0.402374-0.089336-0.001589-0.028251-0.002296-0.026979-0.012047-0.002008-0.001764-4.29E-4-2.52E-4-0.023498-0.001321.stored", 
+		"../resources/opacitwy_tables/OP17.0.346052-0.061805-0.402374-0.089336-0.001589-0.028251-0.002296-0.026979-0.012047-0.002008-0.001764-4.29E-4-2.52E-4-0.023498-0.001321.stored", 
 		"../resources/opacity_tables/OP17.0.411715-0.103417-0.167328-0.149485-0.002659-0.047272-0.003842-0.045144-0.020158-0.00336-0.002952-7.18E-4-4.22E-4-0.039319-0.00221.stored", 
 		"../resources/opacity_tables/OP17.0.767923-0.019025-0.154639-0.027499-4.89E-4-0.008696-7.07E-4-0.008305-0.003708-6.18E-4-5.43E-4-1.32E-4-7.8E-5-0.007233-4.07E-4.stored", 
 		"../resources/opacity_tables/OP17.0.781582-0.017905-0.145537-0.025881-4.6E-4-0.008184-6.65E-4-0.007816-0.00349-5.82E-4-5.11E-4-1.24E-4-7.3E-5-0.006807-3.83E-4.stored", 
@@ -273,6 +277,7 @@ public:
 	void ReadOpacityFileName();
 	int GetTableIndex();
 	int AccessSolarModel();
+	void ComputeEmissionRates();
 	double AccessOpacityFile(int, int, int, int); 
 	//double ElectronNumberDensity(double, double);
 	//double ElementNumberDensity(double,double,double);
@@ -281,12 +286,21 @@ public:
 };
 
 //Base class
-class LagPoly {
+class GaussLagQuad {
         public:
-                std::vector<double> coef();
-                std::vector<double> rootsPy(std::vector<double>);
-                double eval(int, double);
-                double deriv(int, double);
+		GaussLagQuad();
+		~GaussLagQuad();
+                std::vector<double> lagCoef();
+                std::vector<double> lagRootsPy(std::vector<double>);
+                double lagEval(int, double);
+                double lagDeriv(int, double);
+                double quadWeight(double);
+                double inner_integral(double);
+                double quadFunc(double);
+                double F(double,double);
+
+                double w = 0.0;
+                double y = 0.0;
 		int N = 5;
 		std::vector<double> coeff_vec;
 		std::vector<double> roots_vec;
@@ -296,16 +310,16 @@ class LagPoly {
 
 
 //Derived class
-class GaussLagQuad:LagPoly {
+/*class GaussLagQuad:GaussLagQuad {
 	public:
 		double weight(double);
 		double inner_integral(double);
 		double func(double);
-		void computeWeightsAndRoots();
 		double F(double,double);
+		
 		double w = 0.0;
 		double y = 0.0;
-};
+};*/
 
 //class Integration{
 //public:

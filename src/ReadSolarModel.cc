@@ -24,8 +24,9 @@ int main(){
 	//f.ReadAndStoreSolarModel(); 
 	//f.MetalMassFraction();
 	f.ReadEnergyValues();
-	//f.ReadOpacityFileName();
-    	//f.AccessSolarModel();
+	f.ReadOpacityFileName();
+	f.AccessSolarModel();
+	f.ComputeEmissionRates();
 	return 0;
 }
 
@@ -89,7 +90,6 @@ int SolarModel::ReadEnergyValues(){
 			++i;
 		}
 	}
-	std::cout << energy_vec[i-2] << std::endl;
 	return 0;
 }
 
@@ -103,13 +103,13 @@ for a particular row and later access that opacity table.
 ----------------------------------------------------------------------------------------------------------*/
 int SolarModel::AccessSolarModel() {
 
-	int lineNumber = 0;
-	int i = 0;
+	int lineNumber = 0; // counter for each line in the solar model file
+	int i = 0; //counter for each row in the solar model data table
 	double total_massFrac = 0.0;
 	double non_metal_massFrac = 1.0;
 	double metal_massFrac_actual = 0.0;
 	double metal_massFrac = 0.0;
-        std::vector<ROW> row;
+        //std::vector<ROW> row;
         std::string solarmodel_filename = "../resources/AGSS09_solar_model.dat";
         std::string line;
         std::ifstream solarmodel_file;
@@ -122,20 +122,20 @@ int SolarModel::AccessSolarModel() {
 	}
 
 	std::cout << "[INFO] Opening output file for storing the computed results..." << std::endl;
-	std::stringstream ss;
+	std::stringstream ss1;
 	std::ofstream outfile1;
 	outfile1.open("../results/electron_densities.txt");
-        ss << std::setw(15) << std::left << "r [R_sun]";
-	ss << std::setw(20) << std::left << "e #density [cm**-3]";
-	ss << std::setw(20) << std::left << "e #density [keV**3]";
-	ss << std::setw(20) << std::left << "Compton_emrate []";
-	ss << std::setw(20) << std::left << "Debye scale";
-	ss << std::setw(25) << std::left << "Sum(Z(j)^2*n_j) [keV**3]";
-	ss << std::setw(20) << std::left << "Brems_emrate";
-	ss << std::setw(20) << std::left << "S_e";
-	ss << std::setw(20) << std::left << "S_z";
-	ss << std::setw(20) << std::left << "Total_emrate";
-	ss << std::endl;
+        ss1 << std::setw(15) << std::left << "r [R_sun]";
+	ss1 << std::setw(20) << std::left << "e #density [cm**-3]";
+	ss1 << std::setw(20) << std::left << "e #density [keV**3]";
+	//ss1 << std::setw(20) << std::left << "Compton_emrate []";
+	ss1 << std::setw(20) << std::left << "Debye scale";
+	ss1 << std::setw(25) << std::left << "Sum(Z(j)^2*n_j) [keV**3]";
+	//ss1 << std::setw(20) << std::left << "Brems_emrate";
+	ss1 << std::setw(20) << std::left << "S_e";
+	ss1 << std::setw(20) << std::left << "S_z";
+	//ss1 << std::setw(20) << std::left << "Total_emrate";
+	ss1 << std::endl;
 
         std::cout << "[INFO] Reading solar model file... " << std::endl;
 	//++lineNumber;
@@ -148,14 +148,14 @@ int SolarModel::AccessSolarModel() {
                         //++lineNumber;
                 }
                 else {
-                        std::cout << "[INFO] Reading line " << lineNumber << std::endl;
+                        std::cout << "[INFO] Reading line " << lineNumber << " of the Solar Model file = row " << i+1 << " of the table" << std::endl;
 			row.push_back(ROW());
 			//TODO--> Make this efficient!
 			iss_line >> row[i].massFrac >> row[i].radius >> row[i].temp >> row[i].density >> row[i].pressure >> row[i].lumiFrac >> row[i].H_massFrac >> row[i].He4_massFrac >> row[i].He3_massFrac >> row[i].C12_massFrac >> row[i].C13_massFrac >> row[i].N14_massFrac >> row[i].N15_massFrac >> row[i].O16_massFrac >> row[i].O17_massFrac >> row[i].O18_massFrac >> row[i].Ne_massFrac >> row[i].Na_massFrac >> row[i].Mg_massFrac >> row[i].Al_massFrac >> row[i].Si_massFrac >> row[i].P_massFrac >> row[i].S_massFrac >> row[i].Cl_massFrac >> row[i].Ar_massFrac >> row[i].K_massFrac >> row[i].Ca_massFrac >> row[i].Sc_massFrac >> row[i].Ti_massFrac >> row[i].V_massFrac >> row[i].Cr_massFrac >> row[i].Mn_massFrac >> row[i].Fe_massFrac >> row[i].Co_massFrac >> row[i].Ni_massFrac;
 	
 			row[i].temp_keV	= TempTokeV(row[i].temp);
 	
-			ss << std::setw(15) << std::left << row[i].radius;
+			ss1 << std::setw(15) << std::left << row[i].radius;
 
 			/*------------------------------------------------------------------------------------------------------------------
 			   The isotopes don't need to be summed up in order to make the comparison with the OP filenames and select an OP file
@@ -181,7 +181,8 @@ int SolarModel::AccessSolarModel() {
 			   reason: while summing for metal_massFrac, we are inlcuding only those elements 
 			   which are available in the opacity tables
 			   for our purposes, we will consider the metal_massFrac as the total metal mass frac
-			   reason: that's what corresponds to the opacity tables */
+			   reason: that's what corresponds to the opacity tables 
+			*/
 
 			//std::cout << "[DEBUG] total massFrac: " << total_massFrac << std::endl;
 			//std::cout << "[DEBUG] H_massFrac: " << row[i].H_massFrac << std::endl;
@@ -396,22 +397,7 @@ int SolarModel::AccessSolarModel() {
 			std::cout << "[INFO] Number densities converted to units of keV**3" << std::endl;
 			for(int j=0; j<29; j++)
 				row[i].n_Z_keV3.push_back(DensityTokeV3(row[i].n_Z[j]));
-			
-
-			double energy = 3.;//keV //random value just for the time being. TODO: Put in the actual vector of energy values!
-			row[i].w = energy/(row[i].temp_keV); //temp in keV;
-			std::cout << "w for this row: " << row[i].w << std::endl;
-
-			/*-------------------------------------- Absorption coefficient ------------------------------------*/
-
-                        std::cout << "[INFO] Computing the absorption coefficient..." << std::endl;
-			for(int j=0; j<29; j++)
-				//row[i].abs_coeff += row[i].n_Z[j]i;
-				row[i].abs_coeff += row[i].n_Z[j] * 7.645e-24;
-			//row[i].abs_coeff *= row[i].opacity_value * (1-exp(row[i].w));
-			row[i].abs_coeff *= row[i].opacity_value * (1-exp(row[i].w));
-			std::cout << "Absorption coefficient for this row: " << row[i].abs_coeff << std::endl;
-                       
+	
 			/*-------------------------------------- Electron number density ------------------------------------*/
 
 			std::cout << "[INFO] Computing the electron number density..." << std::endl;
@@ -421,19 +407,10 @@ int SolarModel::AccessSolarModel() {
 			std::cout << "Electron number density stored for this row: " << row[i].n_e << std::endl;
 			std::cout << "Electron number density stored for this row [keV]: " << row[i].n_e_keV << std::endl;
 
-			ss << std::setw(20) << std::left << row[i].n_e;
-			ss << std::setw(20) << std::left << row[i].n_e_keV;
-	
-			/*-------------------------------------- Compton emission rate ------------------------------------*/
+			ss1 << std::setw(20) << std::left << row[i].n_e;
+			ss1 << std::setw(20) << std::left << row[i].n_e_keV;
 
-			std::cout << "[INFO] Computing the Compton Emission Rate..." << std::endl;
-			//row[i].compton_emrate = (alpha * g_ae * g_ae * energy * energy * row[i].n_e * row[i].n_e)/(3 * m_e * m_e * (exp(row[i].w)-1));
-			row[i].compton_emrate = (alpha * g_ae * g_ae * energy * energy * row[i].n_e_keV * row[i].n_e_keV)/(3 * m_e_keV * m_e_keV * (exp(row[i].w)-1.));
-			std::cout << "Compton emission rate for this row: " << row[i].compton_emrate << std::endl;
-
-			ss << std::setw(20) << std::left << row[i].compton_emrate;
-
-			/*-------------------------------------- Debye screening scale ------------------------------------*/
+			/*--------------------------------- Debye screening scale ------------------------------------*/
 	
 			std::cout << "[INFO] Computing the Debye screening scale..." << std::endl; 
 			//row[i].debye_scale = (4 * M_PI * alpha / row[i].temp) * (row[i].n_e + row[i].n_Z[0] + row[i].n_Z[1]);//making the same approximation as for n_e calculation 
@@ -441,33 +418,86 @@ int SolarModel::AccessSolarModel() {
 			row[i].y = row[i].debye_scale/(std::sqrt(2*m_e_keV*row[i].temp_keV));
 			std::cout << "Debye screening scale for this row: " << row[i].debye_scale << std::endl;
 			std::cout << "y for this row: " << row[i].y << std::endl;
+			std::cout << "------------------------------------------" << std::endl;
 			
-			ss << std::setw(20) << std::left << row[i].debye_scale;
-			ss << std::setw(25) << std::left << (row[i].n_Z[0] + 4*row[i].n_Z[1]) * 7.645e-24;
-				
-			/*-------------------------------------- Bremsstrahlung emission rate ------------------------------------*/
+			ss1 << std::setw(20) << std::left << row[i].debye_scale;
+			ss1 << std::setw(25) << std::left << (row[i].n_Z[0] + 4*row[i].n_Z[1]) * 7.645e-24;		
+
+
+                       /*----------------------- to compare values with those of M. Giannotti ------------------------*/
+
+                        row[i].Se = (alpha * alpha * (4./3.) * std::sqrt(M_PI) * row[i].n_e_keV * row[i].n_e_keV) / (std::sqrt(row[i].temp_keV) * std::pow(m_e_keV,3.5));
+                        //row[i].Se = 1.422e-10 * (pow(470.8,2)) / (std::sqrt(row[i].temp_keV));
+                        ss1 << std::setw(20) << std::left << row[i].Se;
+
+                        row[i].Sz = (alpha * alpha * (4./3.) * std::sqrt(2.*M_PI) * row[i].n_e_keV * (row[i].n_Z[0] + 4*row[i].n_Z[1]) * 7.683e-24) / (std::sqrt(row[i].temp_keV) * std::pow(m_e_keV,3.5));
+                        //row[i].Sz = (alpha * alpha * (4./3.) * std::sqrt(2*3.142)) / (std::pow(510.998,3.5));
+                        ss1 << std::setw(20) << std::left << row[i].Sz;
+
+			/*--------------------------------------------------------------------------------------------*/
+
+			++i;
+		}
+		++lineNumber;
+	}
+	std::cout << std::endl;
+	std::cout << "-----------  Finished accessing the solar model ---------" << std::endl;
+	std::cout << std::endl;
+	outfile1 << ss1.str() << std::endl;
+	outfile1.close();
+	return 0;
+}
+
+void SolarModel::ComputeEmissionRates(){
+	
+	//TODO:computed values in this function may not need to be stored in the row vector, they can just be stored in output files
+
+	GaussLagQuad gauss;
+
+	for(unsigned int i=0; i<row.size(); i++ ){
+	
+		std::cout << "Computing values for row " << i+1 << " of the Solar Model table" << std::endl;
+		//for(unsigned int j=0; j<energy_vec.size(); j++){
+		for(unsigned int j=energy_vec.size()-1; j<energy_vec.size(); j++){
+
+			/*------------------------------- start of use of energy values ------------------------------*/	
+
+			double energy = energy_vec[j];//keV
+			row[i].w = energy/(row[i].temp_keV); //temp in keV;
+			std::cout << "w for this row: " << row[i].w << std::endl;
+
+			/*---------------------------------- Absorption coefficient ----------------------------------*/
+
+                        std::cout << "[INFO] Computing the absorption coefficient..." << std::endl;
+			for(int j=0; j<29; j++)
+				//row[i].abs_coeff += row[i].n_Z[j]i;
+				row[i].abs_coeff += row[i].n_Z[j] * 7.645e-24;
+			//row[i].abs_coeff *= row[i].opacity_value * (1-exp(row[i].w));
+			row[i].abs_coeff *= row[i].opacity_value * (1-exp(row[i].w));
+			std::cout << "Absorption coefficient for this row: " << row[i].abs_coeff << std::endl;
+                       
+			/*---------------------------------- Compton emission rate -----------------------------------*/
+
+			std::cout << "[INFO] Computing the Compton Emission Rate..." << std::endl;
+			//row[i].compton_emrate = (alpha * g_ae * g_ae * energy * energy * row[i].n_e * row[i].n_e)/(3 * m_e * m_e * (exp(row[i].w)-1));
+			row[i].compton_emrate = (alpha * g_ae * g_ae * energy * energy * row[i].n_e_keV * row[i].n_e_keV)/(3 * m_e_keV * m_e_keV * (exp(row[i].w)-1.));
+			std::cout << "Compton emission rate for this row: " << row[i].compton_emrate << std::endl;
+
+			//ss1 << std::setw(20) << std::left << row[i].compton_emrate;
+
+			/*------------------------------- Bremsstrahlung emission rate -------------------------------*/
 	
 			//Integration GaussLag;
 			//GaussLag._w = row[i].w;
 			//GaussLag._y = std::sqrt(2)*row[i].y;
 			//GaussLag.F();
-			GaussLagQuad gauss;
+			//GaussLagQuad gauss; // this object creation is calling the coef and rootsPy functions!!!
 
 			std::cout << "[INFO] Computing the Bremsstrahlung emission rate..." << std::endl; 
 			row[i].brems_emrate = alpha * alpha * g_ae * g_ae * (4/3) * std::sqrt(M_PI) * row[i].n_e_keV * row[i].n_e_keV * exp(-row[i].w) * gauss.F(row[i].w,std::sqrt(2)*row[i].y) / (std::sqrt(row[i].temp_keV) * std::pow(m_e_keV,3.5) * energy);
-			ss << std::setw(20) << std::left << row[i].brems_emrate;
+			//ss1 << std::setw(20) << std::left << row[i].brems_emrate;
 			std::cout << "Bremsstrahlung emission rate for this row: " << row[i].brems_emrate << std::endl;
 			
-			/*----------------------------- to compare values with those of M. Giannotti ---------------------------*/
-	
-			row[i].Se = (alpha * alpha * (4./3.) * std::sqrt(M_PI) * row[i].n_e_keV * row[i].n_e_keV) / (std::sqrt(row[i].temp_keV) * std::pow(m_e_keV,3.5));
-			//row[i].Se = 1.422e-10 * (pow(470.8,2)) / (std::sqrt(row[i].temp_keV));
-			ss << std::setw(20) << std::left << row[i].Se;
-
-			row[i].Sz = (alpha * alpha * (4./3.) * std::sqrt(2.*M_PI) * row[i].n_e_keV * (row[i].n_Z[0] + 4*row[i].n_Z[1]) * 7.683e-24) / (std::sqrt(row[i].temp_keV) * std::pow(m_e_keV,3.5));
-			//row[i].Sz = (alpha * alpha * (4./3.) * std::sqrt(2*3.142)) / (std::pow(510.998,3.5));
-			ss << std::setw(20) << std::left << row[i].Sz;
-				
 
 			/*----------------------------------- Total emission rate ----------------------------------*/
 
@@ -479,17 +509,19 @@ int SolarModel::AccessSolarModel() {
 			std::cout << "Term 2: " << term2 << std::endl;
 			std::cout << "Term 3: " << term3 << std::endl;
 			std::cout << "Total emission rate for this row: " << row[i].total_emrate << std::endl;
+			std::cout << "--------------------------------------------------------------------------" << std::endl;
 
-			ss << std::setw(20) << std::left << row[i].total_emrate << std::endl;
+			//ss1 << std::setw(20) << std::left << row[i].total_emrate << std::endl;
+			//ss2 << std::setw(20) << std::left << row[i].total_emrate << std::endl;
 
-			std::cout << std::endl;	
-                        ++i;
+			//std::cout << std::endl;	
+                        //++i;
 		}	
-	        ++lineNumber;
+	       //++lineNumber;
 	}
-	outfile1 << ss.str() << std::endl;
-	outfile1.close();
-	return 0;
+	//outfile1 << ss1.str() << std::endl;
+	//outfile1.close();
+	//return 0;
 }
 
 
@@ -527,7 +559,7 @@ int SolarModel::AccessSolarModel() {
 //}
 // 
 /*---------------------------------------------------------------------------------------------------*/
-std::vector<double> LagPoly::coef() {
+std::vector<double> GaussLagQuad::lagCoef() {
 
         //double lroots[N];
         //double weight[N];
@@ -570,7 +602,7 @@ std::vector<double> LagPoly::coef() {
 }
 
 
-std::vector<double> LagPoly::rootsPy(std::vector<double> poly){
+std::vector<double> GaussLagQuad::lagRootsPy(std::vector<double> poly){
 
         static py::scoped_interpreter guard{};
         std::cout << "import numpy" << std::endl;
@@ -583,7 +615,7 @@ std::vector<double> LagPoly::rootsPy(std::vector<double> poly){
         py::object retVal = roots(polyNumpy);
         std::cout << "echo result" << std::endl;
         std::cout << retVal << std::endl;
-
+	std::cout << std::endl << "-------- Finished computing Laguerre polynomials --------" << std::endl << std::endl;
         //return retVal.cast<std::vector<std::complex<double>>>();
         return retVal.cast<std::vector<double>>();
 
@@ -591,9 +623,9 @@ std::vector<double> LagPoly::rootsPy(std::vector<double> poly){
 
 
 
-double LagPoly::eval(int n, double x){
+double GaussLagQuad::lagEval(int n, double x){
         if(n>0)
-                return (2*n-1-x)*LagPoly::eval(n-1,x) - (1.-(1./n))*LagPoly::eval(n-2,x);
+                return (2*n-1-x)*GaussLagQuad::lagEval(n-1,x) - (1.-(1./n))*GaussLagQuad::lagEval(n-2,x);
         if(n==1)
                 return 1.-x;
         if(n==0)
@@ -601,51 +633,83 @@ double LagPoly::eval(int n, double x){
 	return 0;
 }
 
-double LagPoly::deriv(int m, double x){
+double GaussLagQuad::lagDeriv(int m, double x){
         if(m>0)
-                return LagPoly::deriv(m-1,x) - LagPoly::eval(m-1,x);
+                return GaussLagQuad::lagDeriv(m-1,x) - GaussLagQuad::lagEval(m-1,x);
         if(m==0)
                 return 0.; 
 	return 0;
 }
 
-double GaussLagQuad::weight(double x){
-        return 1./(x * pow(LagPoly::deriv(N,x),2) );
+//double GaussLagQuad::weight(double x){
+double GaussLagQuad::quadWeight(double x){
+        return 1./(x * pow(GaussLagQuad::lagDeriv(N,x),2) );
 }
 
+//double GaussLagQuad::inner_integral(double t){
 double GaussLagQuad::inner_integral(double t){
         return (1./2.) * ( ((y*y) / (t*t + y*y)) + log( t*t + y*y ) );
 } 
 
-double GaussLagQuad::func(double x){
+//double GaussLagQuad::func(double x){
+double GaussLagQuad::quadFunc(double x){
 	double up_lim = std::sqrt(x+w) + std::sqrt(x);
 	double lo_lim = std::sqrt(x+w) - std::sqrt(x);
 	return inner_integral(up_lim) - inner_integral(lo_lim);
 }
 
+//double GaussLagQuad::F(double _w, double _y){
 double GaussLagQuad::F(double _w, double _y){
 
         double result = 0.0;
-	LagPoly lagpoly;
-	GaussLagQuad glquad;
-	glquad.w = _w;
-	glquad.y = _y;
-	
-	std::vector<double> coeff_vec = lagpoly.coef();
-        std::vector<double> roots_vec = lagpoly.rootsPy(coeff_vec);
-	std::vector<double> weights_vec;
+	//GaussLagQuad lagpoly;
+	//GaussLagQuad glquad;
+	//glquad.w = _w;
+	//glquad.y = _y;
+	w = _w;
+	y = _y; 	
 
-	for(int i=0; i<lagpoly.N; i++){
-		weights_vec.push_back(glquad.weight(roots_vec[i]));
+
+	//std::vector<double> coeff_vec = lagpoly.coef();
+        //std::vector<double> roots_vec = lagpoly.rootsPy(coeff_vec);
+	//std::vector<double> weights_vec;
+
+	//for(int i=0; i<lagpoly.N; i++){
+	//	weights_vec.push_back(glquad.weight(roots_vec[i]));
+	//}
+	for(int i=0; i<N; i++){
+		weights_vec.push_back(quadWeight(roots_vec[i]));
 	}
-	for(int i=0; i<lagpoly.N; i++){
-		result += weights_vec[i] * glquad.func(roots_vec[i]);
+	//for(int i=0; i<lagpoly.N; i++){
+	//	result += weights_vec[i] * glquad.func(roots_vec[i]);
+	//}
+	for(int i=0; i<N; i++){
+		result += weights_vec[i] * quadFunc(roots_vec[i]);
 	}
 	result *= (1./2.);
-	std::cout << "[INFO] F(w,sqrt(2)*y) for this row: " << result << std::endl;
+	std::cout << "[INFO] F for this row: " << result << std::endl;
 	return result;
 }
 
+GaussLagQuad::GaussLagQuad() {
+
+        // since we want our `myNumbers` vector to be constant anyways, the constructor
+        // does not need any arguments
+        coeff_vec = lagCoef();
+	roots_vec = lagRootsPy(coeff_vec);
+
+
+
+}
+
+GaussLagQuad::~GaussLagQuad() {
+
+        // in the desctructor we may want to get rid of something we store in our constructor
+        // for instance clearing the vector (in practice only used for resouce acquisition, e.g.
+        // memory allocation, sockets, file handles etc.)
+        //myNumbers.clear();
+
+}
 
 
 /*---------------------------------------------------------------------------------------------------*/
@@ -1034,3 +1098,19 @@ double SolarModel::AccessOpacityFile(int s, int HandHe, int R, int T) {
 	}
 	return 0;
 }
+/*
+	------  main comes here ------
+
+	int main(){
+	    // create a MyClass object
+	    MyClass obj;
+	    
+	    for (auto el : obj.myNumbers){
+	        std::cout << "Element: " << el << std::endl;
+	    }
+	    // destructor will be called automatically, since it's a normal object and not
+	    // a pointer created by `new` or something similar
+		    return 0;
+	}
+
+*/
