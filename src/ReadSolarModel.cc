@@ -355,8 +355,8 @@ int SolarModel::AccessSolarModel() {
 			//sort(TotalDistVec.begin(),TotalDistVec.end(),SortDistances);
 			
                         std::cout << "[INFO] Calling the function to access the chosen opacity file and obtain the opacity value for the chosen H and He mass fractions, log R and log T values..." << std::endl;
-			row[i].opacity_value = AccessOpacityFile(SelectedOpacityFile, SelectedHandHemassFrac, SelectedlogR, SelectedlogT);
-			std::cout << "Opacity xsec stored for this row: " << row[i].opacity_value << std::endl; 
+			row[i].opacity_value = pow(10,AccessOpacityFile(SelectedOpacityFile, SelectedHandHemassFrac, SelectedlogR, SelectedlogT));
+			std::cout << "Radiative opacity stored for this row: " << row[i].opacity_value << std::endl; 
 			
 			/*-------------------------------------- Number density ------------------------------------*/
 		
@@ -468,14 +468,23 @@ void SolarModel::ComputeEmissionRates(){
 
 			/*---------------------------------- Absorption coefficient ----------------------------------*/
 
-                        std::cout << "[INFO] Computing the absorption coefficient..." << std::endl;
-			for(int j=0; j<29; j++)
-				//row[i].abs_coeff += row[i].n_Z[j]i;
-				row[i].abs_coeff += row[i].n_Z[j] * 7.645e-24;
+                        //std::cout << "[INFO] Computing the absorption coefficient..." << std::endl;
+			//for(int j=0; j<29; j++)
+			//	//row[i].abs_coeff += row[i].n_Z[j]i;
+			//	row[i].abs_coeff += row[i].n_Z[j] * 7.645e-24;
+			////row[i].abs_coeff *= row[i].opacity_value * (1-exp(row[i].w));
 			//row[i].abs_coeff *= row[i].opacity_value * (1-exp(row[i].w));
-			row[i].abs_coeff *= row[i].opacity_value * (1-exp(row[i].w));
-			std::cout << "Absorption coefficient for this row: " << row[i].abs_coeff << std::endl;
+			//std::cout << "Absorption coefficient for this row: " << row[i].abs_coeff << std::endl;
                        
+			/* Radiative opacity is defined as the absorption coefficient per unit mass of target
+			 * as is expressed in section 2.2 of Redondo's paper after equation 2.6
+			 * So the absorption coefficient k(w) used in equation 2.21 will be calculated
+			 * as the product of the radiative opacity and the solar density
+			 */
+
+			row[i].abs_coeff = row[i].opacity_value * row[i].density;
+			
+
 			/*---------------------------------- Compton emission rate -----------------------------------*/
 
 			std::cout << "[INFO] Computing the Compton Emission Rate..." << std::endl;
@@ -565,9 +574,9 @@ std::vector<double> GaussLagQuad::lagCoef() {
         //double weight[N];
 	std::cout << "N: " << N << std::endl;
         std::vector<double> res_coef;
-        double lcoef[N + 1][N + 1] = {{0}}; // --> uncomment when on linux
-        //double lcoef[N + 1][N + 1];           // --> uncomment when on mac
-        //                                           std::memset(lcoef,0,sizeof lcoef); // --> uncomment when on mac
+        //double lcoef[N + 1][N + 1] = {{0}}; // --> uncomment when on linux
+        double lcoef[N + 1][N + 1];           // --> uncomment when on mac
+        std::memset(lcoef,0,sizeof lcoef); // --> uncomment when on mac
 
         int n, i;
         lcoef[0][0] = lcoef[1][0] = 1.; lcoef[1][1]  = -1.;//coeffs of the first two polynomials
@@ -1032,7 +1041,7 @@ double SolarModel::AccessOpacityFile(int s, int HandHe, int R, int T) {
 		//if(lineNumber > 3850 && lineNumber < 3950) { //testing for table 48
 
 			//std::string tableIndex;
-			std::string opacity_xsec = "";
+			std::string log_rad_opa = "";
                         std::size_t posTableIndex = op_line.find("TABLE");
 
                         if (posTableIndex!=std::string::npos){ // 1. if at the first line of a table
@@ -1085,9 +1094,9 @@ double SolarModel::AccessOpacityFile(int s, int HandHe, int R, int T) {
 					//if(row_in_OPtable[0] == logT[std::stoi(T)])
 					//std::cout << "[DEBUG 14] OPtable_temp: " << OPtable_temp << std::endl;
 					if(std::stod(OPtable_temp) == logT[T]) {
-						opacity_xsec = row_in_OPtable[R+1];
-						std::cout << "[INFO] Found the best opacity xsec value for this row: " << opacity_xsec << std::endl;
-						return std::stod(opacity_xsec);
+						log_rad_opa = row_in_OPtable[R+1];
+						std::cout << "[INFO] Found the best log_rad_opa for this row: " << log_rad_opa << std::endl;
+						return std::stod(log_rad_opa);
 					}
 				}
                                 else { continue;// 2.b) if inside a table we don't want to access
